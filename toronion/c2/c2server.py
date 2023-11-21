@@ -30,7 +30,7 @@ def reliable_recv(target):
     data = ''
     while True:
         try:
-            data += target.recv(1024).decode(ENCODING).rstrip()
+            data += target.recv(1024).decode().rstrip()
             return json.loads(data)
         except ValueError:
             # If received data is not a complete JSON, continue receiving.
@@ -48,7 +48,7 @@ def reliable_send(target, data):
     jsondata = json.dumps(data)
     while True:
         try:
-            target.send(jsondata.encode(ENCODING))
+            target.send(jsondata.encode())
             break
         except BrokenPipeError:
             # print("Connection to target lost.")

