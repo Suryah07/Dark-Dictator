@@ -38,14 +38,14 @@ class Tor:
         return os.path.join(base_path, relative_path)
 
     def read_address_from_binary(self):
-        # read onion and port from end of file
-        # path = os.path.abspath(sys.executable)
-        # with open(path, 'rb') as f:
-        #     data = f.read()
-        #     onion = data[-67:-5].decode()
-        #     port = int(data[-5:].decode())
-        onion,port = ("axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion",80)
-        return onion, port
+        #read onion and port from end of file
+        path = os.path.abspath(sys.executable)
+        with open(path, 'rb') as f:
+            data = f.read()
+            onion = data[-67:-5].decode()
+            port = int(data[-5:].decode())
+        # onion,port = ("axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion",80)
+        # return onion, port
 
 
 class ClientSocket:

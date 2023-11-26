@@ -1,3 +1,0 @@
-mss.windows not found in PYZ
-netrc not found in PYZ
-shelx not found in PYZ
