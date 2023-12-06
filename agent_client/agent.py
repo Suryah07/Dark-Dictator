@@ -152,11 +152,6 @@ def persist(reg_name, copy_name):
         reliable_send('[-] Error Creating Persistence With The Target Machine')
 
 
-def startup_persist(file_name):
-    pass
-    # TODO create persistence in startup folder
-
-
 def is_admin():
     global admin
     if platform == 'win32':

@@ -23,6 +23,8 @@ WEBCAM_DIR = './images/webcam'
 WEBCAM_CHUNK_SIZE = 10485760  # 10MB
 WEBCAM_TIMEOUT = 10
 
+heartbeat_timeout = 10  # seconds
+
 ENCODING = 'utf-8'
 
 
@@ -309,11 +311,10 @@ def close_all_target_connections(targets):
 def send_heartbeat(target):
     while True:
         reliable_send(target, 'heartbeat')
-        time.sleep(10)  # adjust the sleep time as needed
+        time.sleep(heartbeat_timeout)  # adjust the sleep time as needed
 
 
 def send_heartbeat_to_all_targets(targets):
-    
     while True:
         for target in targets:
             reliable_send(target, 'heartbeat')
