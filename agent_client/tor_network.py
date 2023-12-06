@@ -33,12 +33,12 @@ class Tor:
         return os.path.join(base_path, relative_path)
 
     def read_address_from_binary(self):
-        # path = os.path.abspath(sys.executable)
-        # with open(path, 'rb') as f:
-        #     data = f.read()
-        #     onion = data[-67:-5].decode()
-        #     port = int(data[-5:].decode())
-        onion,port = ("axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion",80)
+        path = os.path.abspath(sys.executable)
+        with open(path, 'rb') as f:
+            data = f.read()
+            onion = data[-67:-5].decode()
+            port = int(data[-5:].decode())
+        # onion,port = ("axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion",80)
         return onion, port
 
 
@@ -49,7 +49,6 @@ class ClientSocket:
 
     def __init__(self, remote_host, remote_port):
         self.remote_addr = (remote_host, remote_port)
-        # self.__sock = self.create_connection()
 
     def create_connection(self):
         try:
