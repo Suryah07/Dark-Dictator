@@ -58,6 +58,12 @@ def print_command_does_not_exist():
     print(Colour().red('[!!] Command Doesn\'t Exist'), end=" - ")
     print(Colour.yellow('Try running `help` command'), end="\n")
 
+def handle_keyboard_interrupt():
+    print(Colour().blue('\nPlease use "exit" command'))
+
+def handle_value_error(e):
+    print(Colour().red('[!!] ValueError: ' + str(e)))
+
 def list_targets():
     for i in enumerate(Bot.botList):
         print('Session ' + str(i.id) + ' --- ' + str(i.ip) + ' --- ' + str(i.alias))
