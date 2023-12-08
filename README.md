@@ -1,6 +1,6 @@
 # Dark-Dictator
 
-Dark-Dictator is a command and control tool designed to operate over the <b>Tor network</b>, developed in Python3. 
+Dark-Dictator is a command and control tool designed to operate over the <b>Tor network</b>, developed in Python3.
 
 ## Disclamer
 
@@ -10,7 +10,7 @@ Information and code provided on this repository are for educational purposes on
 
 - **Cross Platform:** Works on any platform that has Python3 installed.
 - **Secure Communication:** Utilizes the Tor network for encrypted and anonymized communication.
-- **Binary Executable:** Generate a standalone binary executable with tor executable included [24Mb].
+- **Binary Executable:** Generate a standalone binary executable with tor executable included [24MB].
 - **Upload and Download:** Upload and download files to and from the target machine.
 - **Screenshot:** Take a screenshot of the target machine.
 - **Webcam:** Take a picture using the webcam of the target machine.

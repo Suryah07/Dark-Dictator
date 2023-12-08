@@ -120,7 +120,6 @@ def send_all(command):
     print(Colour.green('Target sessions!'))
     try:
         for target in Bot.botList:
-            # print(Bot.botList[target].target)
             Bot.botList[target].reliable_send(command)
     except Exception as e:
         print(f'Failed to send command to all targets. Error: {e}')
