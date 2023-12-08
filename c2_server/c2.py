@@ -79,7 +79,7 @@ def set_alias(command):
         print('[-] No Session Under That ID Number.')
         return
     Bot.botList[session_id].alias = input('Enter new alias for session '+ str(session_id) + ':')
-    print(alias)
+    print('Alias changed to ' + Bot.botList[session_id].alias)
 
 def close_all_target_connections():
     for target in Bot.botList:
