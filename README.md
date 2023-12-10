@@ -24,6 +24,7 @@ Dig around the source code and find it out yourself.
 ## Upcoming Features
 - [ ] Chrome Passwords Dump
 - [ ] Reduce the Executable Size
+- [ ] httpimport load large packages on runtime
 - [ ] Wifi Passwords Dump
 - [ ] Memory Injection
 - [ ] Interactive shell
