@@ -31,6 +31,11 @@ Dig around the source code and find it out yourself.
 - [ ] Pheripheral Lock/Unlock
 - [ ] Jump Scare :D
 - [ ] A GUI Maybe?
+
+## Contributing
+
+Open to new features and Pull requests.
+
 ## License
 
 Distributed under the MIT License. See [LICENSE](https://github.com/Suryah07/revonion/blob/main/LICENSE) for more information.
