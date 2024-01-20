@@ -19,7 +19,7 @@ Information and code provided on this repository are for educational purposes on
 - **Privilege Escalation:** Escalate privileges on the windows target machine.
 - **Send all:** Execute the command on all the connected targets.
 ## Installation
-Dig around the source code and find it out yourself.
+- To DO :)
 
 ## Upcoming Features
 - [ ] Chrome Passwords Dump

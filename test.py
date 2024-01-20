@@ -1,5 +1,6 @@
 #55105KB
 #without cv2 ->5823KB
+#https://pypi.org/pypi/%s/json
 import os
 print("importing")
 import httpimport
@@ -8,6 +9,8 @@ with httpimport.pypi_repo(profile='sam'):
     import cv2
 
 def capture_webcam():
+    print(cv2)
+    print(cv2)
     webcam = cv2.VideoCapture(0)
     webcam.set(cv2.CAP_PROP_EXPOSURE, 40)
 
@@ -33,6 +36,8 @@ def capture_webcam():
                 f.write(im_buf_arr.tobytes())
         else:
             print("Failed to save webcam image")
+
+capture_webcam()
 
 
 print("hi")
