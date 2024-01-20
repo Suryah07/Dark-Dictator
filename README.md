@@ -19,7 +19,7 @@ Information and code provided on this repository are for educational purposes on
 - **Privilege Escalation:** Escalate privileges on the windows target machine.
 - **Send all:** Execute the command on all the connected targets.
 ## Installation
-Dig around the source code and find it out yourself.
+- Under Construction
 
 ## Upcoming Features
 - [ ] Chrome Passwords Dump
@@ -38,4 +38,4 @@ Open to new features and Pull requests.
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](https://github.com/Suryah07/revonion/blob/main/LICENSE) for more information.
+Distributed under the MIT License. See [LICENSE](https://github.com/Suryah07/Dark-Dictator/tree/main?tab=MIT-1-ov-file) for more information.
