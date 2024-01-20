@@ -28,7 +28,7 @@ Information and code provided on this repository are for educational purposes on
 - [ ] Wifi Passwords Dump
 - [ ] Memory Injection
 - [ ] Interactive shell
-- [ ] Pheripheral Lock/Unlock
+- [ ] Peripheral Lock/Unlock
 - [ ] Jump Scare :D
 - [ ] A GUI Maybe?
 

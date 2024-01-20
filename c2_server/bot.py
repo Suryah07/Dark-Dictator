@@ -238,6 +238,10 @@ class Bot:
                 self.reliable_send(command)
                 result = self.reliable_recv()
                 print(result)
+            elif command[:8] == "inpblock" or command[:10]=="inpunblock":
+                self.reliable_send(command)
+                result = self.reliable_recv()
+                print(result)
             elif command == 'help':
                 self.bot_help_manual()
             else:

