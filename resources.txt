@@ -1,0 +1,7 @@
+PYTHON IN MEMORY EXECUTION :
+
+https://github.com/naksyn/PythonMemoryModule
+
+IN MEMORY LIBRARY IMPORT:
+
+https://github.com/operatorequals/httpimport

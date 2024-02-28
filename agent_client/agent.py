@@ -9,7 +9,7 @@ from sys import platform
 from shutil import copyfile
 import requests
 from mss import mss
-
+# import cv2
 #importing tor network
 from tor_network import ClientSocket, Tor
 

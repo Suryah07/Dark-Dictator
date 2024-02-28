@@ -1,4 +1,11 @@
 opencv-python
-PyAutoGUI==0.9.53
-pynput==1.7.6
-requests==2.28.0
+PyAutoGUI
+pynput
+requests
+pyinstaller
+mss
+pysocks
+pynput
+pywin32
+pycryptodome
+opencv-python
