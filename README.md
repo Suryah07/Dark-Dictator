@@ -18,17 +18,18 @@ Information and code provided on this repository are for educational purposes on
 - **Persistence:** Maintain persistence on the target machine.
 - **Privilege Escalation:** Escalate privileges on the windows target machine.
 - **Send all:** Execute the command on all the connected targets.
+
 ## Installation
 - Under Construction
 
 ## Upcoming Features
-- [ ] Chrome Passwords Dump
+- [x] Chrome Passwords Dump
 - [ ] Reduce the Executable Size
 - [ ] httpimport load large packages on runtime
 - [ ] Wifi Passwords Dump
 - [ ] Memory Injection
 - [ ] Interactive shell
-- [ ] Peripheral Lock/Unlock
+- [x] Peripheral Lock/Unlock
 - [ ] Jump Scare :D
 - [ ] A GUI Maybe?
 
