@@ -1,0 +1,11 @@
+1.Need to change the whole server architecture as there cannot be multi shell connected and running
+
+2. Http import libraries from server or online during runtime and keep them in memory rather than disk
+
+3. Import executables and able to execute them during runtime 
+
+4. Open a new shell for each new client that wishes to open a interactive shell to the agent
+
+5. Microservices architecture prefered
+
+6. Need to redo most of the architecture part
