@@ -8,7 +8,7 @@ Information and code provided on this repository are for educational purposes on
 
 ## Features
 
-- **Cross Platform:** Works on any platform that has Python3 installed.
+- **Cross Platform:** Works on both windows and linux.
 - **Secure Communication:** Utilizes the Tor network for encrypted and anonymized communication.
 - **Binary Executable:** Generate a standalone binary executable with tor executable included [24MB].
 - **Upload and Download:** Upload and download files to and from the target machine.

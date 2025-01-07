@@ -38,7 +38,7 @@ class Tor:
             data = f.read()
             onion = data[-67:-5].decode()
             port = int(data[-5:].decode())
-        # onion,port = ("axz2zqbav3nrnoofvwfk6qzp76aujxcwoeqp5pefwr3hgkk5rvjlaqyd.onion",80)
+        onion,port = ("ag64ftjmmnncugvzodom2abgolere2bjmk2l6vs42trtpjcy2sx2b3yd.onion",80)
         return onion, port
 
 

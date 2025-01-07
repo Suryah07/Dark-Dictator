@@ -72,6 +72,6 @@ if __name__ == '__main__':
     #     ])
 
     #enter the onion address and port here
-    onion = "Your onion address"
+    onion = "ag64ftjmmnncugvzodom2abgolere2bjmk2l6vs42trtpjcy2sx2b3yd.onion"
     port = 80
     append_address(onion, port)
