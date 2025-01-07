@@ -70,6 +70,7 @@ def initialise_socket():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('127.0.0.1', 5555))
     sock.listen(5)
+    sock.settimeout(1)  # Set timeout for accept()
     return sock
 
 def accept_connections():
@@ -77,7 +78,6 @@ def accept_connections():
     while True:
         if not start_flag:
             break
-        sock.settimeout(1)
         try:
             target, ip = sock.accept()
             try:
