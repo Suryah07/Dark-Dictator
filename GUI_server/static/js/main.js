@@ -20,13 +20,31 @@ function updateTargets() {
                 }
                 
                 const [ip, port] = target.ip.replace(/[()]/g, '').split(',');
+                const connectedTime = new Date(target.connected_time).toLocaleString();
                 
                 targetElement.innerHTML = `
-                    <div class="session-header">Session ${target.id}</div>
-                    <div class="session-details">
-                        IP: ${ip}<br>
-                        Port: ${port}<br>
-                        Alias: ${target.alias}
+                    <div class="session-info">
+                        <div class="session-header">
+                            <span class="status-indicator"></span>
+                            Session ${target.id}
+                        </div>
+                        <div class="session-details">
+                            IP: ${ip}<br>
+                            Port: ${port}<br>
+                            Alias: ${target.alias}
+                            <div class="session-time">Connected: ${connectedTime}</div>
+                        </div>
+                    </div>
+                    <div class="session-actions">
+                        <button class="action-button" onclick="event.stopPropagation(); selectSession(${target.id})">
+                            <span class="material-icons">terminal</span>
+                        </button>
+                        <button class="action-button" onclick="event.stopPropagation(); renameSession(${target.id})">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="action-button" onclick="event.stopPropagation(); terminateSession(${target.id})">
+                            <span class="material-icons">close</span>
+                        </button>
                     </div>
                 `;
                 
@@ -91,6 +109,11 @@ function sendCommand() {
             currentSession = null;
             document.getElementById('current-session').textContent = 'None';
             updateTargets();
+        }
+        
+        if (command) {
+            commandHistory.push(command);
+            commandIndex = -1;
         }
     })
     .catch(error => {
@@ -174,4 +197,79 @@ document.getElementById('command-input').addEventListener('keypress', function(e
     if (e.key === 'Enter') {
         sendCommand();
     }
-}); 
+});
+
+// Update the command input to support command history
+let commandHistory = [];
+let commandIndex = -1;
+
+document.getElementById('command-input').addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (commandHistory.length > 0 && commandIndex < commandHistory.length - 1) {
+            commandIndex++;
+            this.value = commandHistory[commandHistory.length - 1 - commandIndex];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (commandIndex > 0) {
+            commandIndex--;
+            this.value = commandHistory[commandHistory.length - 1 - commandIndex];
+        } else if (commandIndex === 0) {
+            commandIndex = -1;
+            this.value = '';
+        }
+    }
+});
+
+// Add new functions for session management
+function renameSession(sessionId) {
+    const newAlias = prompt('Enter new alias for session ' + sessionId);
+    if (newAlias) {
+        fetch('/api/set_alias', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: sessionId,
+                alias: newAlias
+            })
+        })
+        .then(response => response.json())
+        .then(() => {
+            updateTargets();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error renaming session');
+        });
+    }
+}
+
+function terminateSession(sessionId) {
+    if (confirm('Are you sure you want to terminate this session?')) {
+        sendCommandToSession(sessionId, 'quit')
+            .then(() => {
+                if (currentSession === sessionId) {
+                    currentSession = null;
+                    document.getElementById('current-session').textContent = 'None';
+                }
+                updateTargets();
+            });
+    }
+}
+
+function sendCommandToSession(sessionId, command) {
+    return fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: sessionId,
+            command: command
+        })
+    })
+    .then(response => response.json());
+} 

@@ -27,8 +27,8 @@ body {
 
 .header {
     text-align: center;
-    margin-bottom: 30px;
-    padding: 20px;
+    margin-bottom: 20px;
+    padding: 10px;
     background: var(--surface-dark);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -36,8 +36,9 @@ body {
 
 .title {
     color: var(--primary-color);
-    font-size: 12px;
+    font-size: 8px;
     margin: 0;
+    line-height: 1.2;
 }
 
 .main-content {
@@ -181,24 +182,52 @@ button:active {
 
 .target-item {
     background: var(--card-dark);
-    padding: 16px;
-    margin-bottom: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
     border-radius: 6px;
     cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s;
+    transition: all 0.2s ease;
     border-left: 3px solid transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.target-item:hover {
-    transform: translateX(4px);
-    background: var(--surface-dark);
-    border-left-color: var(--primary-color);
+.target-item .session-actions {
+    display: none;
+    gap: 8px;
 }
 
-.target-item.selected {
+.target-item:hover .session-actions {
+    display: flex;
+}
+
+.action-button {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 0;
+    background: transparent;
+    border: 1px solid var(--text-secondary);
+}
+
+.action-button:hover {
     background: var(--primary-color);
-    transform: translateX(4px);
-    border-left-color: white;
+    border-color: var(--primary-color);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-color);
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.session-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
 }
 
 .session-header {
