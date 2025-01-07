@@ -1,4 +1,2 @@
-opencv-python
-PyAutoGUI==0.9.53
-pynput==1.7.6
-requests==2.28.0
+requests>=2.25.1
+socks>=0.0.1
