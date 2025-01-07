@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>C2 Server GUI</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Roboto+Mono&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -12,25 +14,53 @@
         
         <div class="main-content">
             <div class="targets-panel">
-                <h2>Active Sessions</h2>
+                <h2>
+                    <span class="material-icons">devices</span>
+                    Active Sessions
+                </h2>
                 <div id="targets-list"></div>
             </div>
             
             <div class="command-panel">
-                <h2>Command Center</h2>
+                <h2>
+                    <span class="material-icons">terminal</span>
+                    Command Center
+                </h2>
+                
                 <div class="session-info">
-                    <span>Selected Session: </span>
-                    <span id="current-session">None</span>
+                    <span class="material-icons">computer</span>
+                    Selected Session: <span id="current-session">None</span>
                 </div>
                 
                 <div class="command-input">
                     <input type="text" id="command-input" placeholder="Enter command...">
-                    <button onclick="sendCommand()">Send</button>
+                    <button onclick="sendCommand()" class="send-button">
+                        <span class="material-icons">send</span>
+                        Send
+                    </button>
+                </div>
+                
+                <div class="command-buttons">
+                    <button onclick="showHelp()" class="help-button">
+                        <span class="material-icons">help_outline</span>
+                        Help
+                    </button>
+                    <button onclick="clearOutput()" class="clear-button">
+                        <span class="material-icons">clear_all</span>
+                        Clear
+                    </button>
                 </div>
                 
                 <div class="file-upload">
+                    <label for="file-input">
+                        <span class="material-icons">upload_file</span>
+                        Choose File
+                    </label>
                     <input type="file" id="file-input">
-                    <button onclick="uploadFile()">Upload File</button>
+                    <button onclick="uploadFile()" class="send-button">
+                        <span class="material-icons">cloud_upload</span>
+                        Upload
+                    </button>
                 </div>
                 
                 <div class="command-output">

@@ -7,6 +7,11 @@ function updateTargets() {
             const targetsList = document.getElementById('targets-list');
             targetsList.innerHTML = '';
             
+            if (targets.length === 0) {
+                targetsList.innerHTML = '<div class="no-targets">No active sessions</div>';
+                return;
+            }
+            
             targets.forEach(target => {
                 const targetElement = document.createElement('div');
                 targetElement.className = 'target-item';
@@ -14,10 +19,15 @@ function updateTargets() {
                     targetElement.className += ' selected';
                 }
                 
+                const [ip, port] = target.ip.replace(/[()]/g, '').split(',');
+                
                 targetElement.innerHTML = `
-                    Session ${target.id} - ${target.ip}
-                    <br>
-                    Alias: ${target.alias}
+                    <div class="session-header">Session ${target.id}</div>
+                    <div class="session-details">
+                        IP: ${ip}<br>
+                        Port: ${port}<br>
+                        Alias: ${target.alias}
+                    </div>
                 `;
                 
                 targetElement.onclick = () => selectSession(target.id);
@@ -32,8 +42,19 @@ function selectSession(sessionId) {
     updateTargets();
 }
 
+function setLoading(isLoading) {
+    const sendButton = document.querySelector('.send-button');
+    if (isLoading) {
+        sendButton.innerHTML = '<div class="loading"></div>';
+        sendButton.disabled = true;
+    } else {
+        sendButton.innerHTML = '<span class="material-icons">send</span> Send';
+        sendButton.disabled = false;
+    }
+}
+
 function sendCommand() {
-    if (!currentSession) {
+    if (!currentSession && document.getElementById('command-input').value !== 'help') {
         alert('Please select a session first');
         return;
     }
@@ -43,20 +64,26 @@ function sendCommand() {
     
     if (!command) return;
     
+    setLoading(true);
+    
     fetch('/api/send_command', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            session_id: currentSession,
+            session_id: currentSession || 0,
             command: command
         })
     })
     .then(response => response.json())
     .then(data => {
         const output = document.getElementById('output');
-        output.textContent += `\n> ${command}\n${data.result || data.message}\n`;
+        if (command === 'help') {
+            output.innerHTML += `\n> ${command}\n<div class="help-text">${formatHelpText(data.result)}</div>\n`;
+        } else {
+            output.textContent += `\n> ${command}\n${data.result || data.message}\n`;
+        }
         output.scrollTop = output.scrollHeight;
         commandInput.value = '';
         
@@ -69,6 +96,9 @@ function sendCommand() {
     .catch(error => {
         console.error('Error:', error);
         alert('Error sending command');
+    })
+    .finally(() => {
+        setLoading(false);
     });
 }
 
@@ -99,6 +129,40 @@ function uploadFile() {
         console.error('Error:', error);
         alert('Error uploading file');
     });
+}
+
+function showHelp() {
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: currentSession || 0,
+            command: 'help'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const output = document.getElementById('output');
+        output.innerHTML += `\n<div class="help-text">${formatHelpText(data.result)}</div>\n`;
+        output.scrollTop = output.scrollHeight;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error getting help');
+    });
+}
+
+function formatHelpText(text) {
+    return text.replace(/^([A-Za-z\s]+):$/gm, '<div class="command-category">$1:</div>')
+               .replace(/^\s\s([a-z_]+.*-->.*$)/gm, '<div class="command-item">$1</div>')
+               .replace(/\n/g, '<br>');
+}
+
+function clearOutput() {
+    const output = document.getElementById('output');
+    output.textContent = '';
 }
 
 // Update targets list every 5 seconds

