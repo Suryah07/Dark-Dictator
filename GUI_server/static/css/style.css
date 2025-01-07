@@ -1,0 +1,110 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: monospace;
+    background: #1e1e1e;
+    color: #ffffff;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.title {
+    color: #00ff00;
+    font-size: 12px;
+}
+
+.main-content {
+    display: flex;
+    gap: 20px;
+}
+
+.targets-panel {
+    flex: 1;
+    background: #2d2d2d;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.command-panel {
+    flex: 2;
+    background: #2d2d2d;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.command-input {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.command-input input {
+    flex: 1;
+    padding: 8px;
+    background: #1e1e1e;
+    border: 1px solid #3d3d3d;
+    color: #ffffff;
+}
+
+.command-input button {
+    padding: 8px 15px;
+    background: #007acc;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.command-output {
+    background: #1e1e1e;
+    padding: 10px;
+    border-radius: 3px;
+    min-height: 200px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.target-item {
+    padding: 8px;
+    margin: 5px 0;
+    background: #1e1e1e;
+    cursor: pointer;
+}
+
+.target-item:hover {
+    background: #3d3d3d;
+}
+
+.target-item.selected {
+    background: #007acc;
+}
+
+.file-upload {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.file-upload input[type="file"] {
+    flex: 1;
+    padding: 8px;
+    background: #1e1e1e;
+    border: 1px solid #3d3d3d;
+    color: #ffffff;
+}
+
+.file-upload button {
+    padding: 8px 15px;
+    background: #007acc;
+    border: none;
+    color: white;
+    cursor: pointer;
+} 

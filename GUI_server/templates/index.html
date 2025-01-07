@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>C2 Server GUI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <pre class="title">{{ title | safe }}</pre>
+        </div>
+        
+        <div class="main-content">
+            <div class="targets-panel">
+                <h2>Active Sessions</h2>
+                <div id="targets-list"></div>
+            </div>
+            
+            <div class="command-panel">
+                <h2>Command Center</h2>
+                <div class="session-info">
+                    <span>Selected Session: </span>
+                    <span id="current-session">None</span>
+                </div>
+                
+                <div class="command-input">
+                    <input type="text" id="command-input" placeholder="Enter command...">
+                    <button onclick="sendCommand()">Send</button>
+                </div>
+                
+                <div class="file-upload">
+                    <input type="file" id="file-input">
+                    <button onclick="uploadFile()">Upload File</button>
+                </div>
+                
+                <div class="command-output">
+                    <pre id="output"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
