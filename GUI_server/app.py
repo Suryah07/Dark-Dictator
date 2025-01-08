@@ -175,29 +175,29 @@ def send_command():
         
     bot = Bot.botList[session_id]
     try:
-        # Send command to agent
-        bot.reliable_send(command)
-        
-        # If command is quit, handle termination
         if command == 'quit':
+            # For quit command, don't wait for response
             try:
-                # Wait briefly for termination response
-                response = bot.reliable_recv(timeout=2)
-                if response and response.get('status') == 'terminating':
-                    logging.info(f"Agent {session_id} confirmed termination")
-            except:
-                logging.warning(f"No termination confirmation from agent {session_id}")
-            finally:
-                # Use the cleanup method to ensure removal
-                bot.cleanup()
-                logging.info(f"Agent {session_id} terminated and cleaned up")
+                bot.kill()  # This will handle cleanup even if send fails
+                logging.info(f"Agent {session_id} terminated")
                 return jsonify({
                     'success': True,
                     'message': 'Agent terminated'
                 })
+            except Exception as e:
+                logging.error(f"Error during termination of agent {session_id}: {e}")
+                # Ensure bot is removed even if kill fails
+                if session_id in Bot.botList:
+                    Bot.botList[session_id].cleanup()
+                return jsonify({
+                    'success': True,
+                    'message': 'Agent forcefully terminated'
+                })
         
         # For other commands...
+        bot.reliable_send(command)
         response = bot.reliable_recv()
+        
         if response is None:
             # Connection lost, cleanup the bot
             bot.cleanup()

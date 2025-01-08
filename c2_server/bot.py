@@ -259,16 +259,22 @@ class Bot:
     def kill(self):
         """Properly terminate the bot and remove from list"""
         try:
-            self.reliable_send('quit')
-            self.target.shutdown(socket.SHUT_RDWR)
-        except:
-            pass
+            # Try to send quit command but don't wait if it fails
+            try:
+                self.reliable_send('quit')
+            except:
+                pass  # If sending fails, continue with cleanup
+            
+            try:
+                self.target.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
         finally:
             try:
                 self.target.close()
             except:
                 pass
-            # Always remove from botList
+            # Always remove from botList, regardless of any errors
             if self.id in Bot.botList:
                 del Bot.botList[self.id]
 
