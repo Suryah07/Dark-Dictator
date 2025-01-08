@@ -4,44 +4,67 @@ let selectedAgents = new Set();
 document.addEventListener('DOMContentLoaded', function() {
     // Tab handling
     const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const tabName = button.dataset.tab;
-            switchTab(tabName);
+            
+            // Update buttons
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Update panes
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Refresh content if needed
+            if (tabName === 'storage') {
+                updateStorage();
+            }
         });
     });
     
     // Initialize storage
     updateStorage();
+    
+    // Initialize command input
+    initializeCommandInput();
 });
 
-function switchTab(tabName) {
-    // Update buttons
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    
-    // Update panes
-    document.querySelectorAll('.tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-    });
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-    
-    // Refresh content if needed
-    if (tabName === 'storage') {
-        updateStorage();
-    }
-}
-
 function updateStorage() {
-    // Fetch and update storage contents
     fetch('/api/storage')
         .then(response => response.json())
         .then(data => {
+            const storageContent = document.querySelector('.storage-content');
+            storageContent.innerHTML = `
+                <div class="folder-section">
+                    <h3>Downloads</h3>
+                    <div id="downloads-list" class="file-list"></div>
+                    <div class="upload-section">
+                        <input type="file" id="upload-file" hidden>
+                        <button onclick="document.getElementById('upload-file').click()" class="upload-button">
+                            <span class="material-icons">upload_file</span>
+                            Upload File
+                        </button>
+                    </div>
+                </div>
+                <div class="folder-section">
+                    <h3>Screenshots</h3>
+                    <div id="screenshots-list" class="file-list"></div>
+                </div>
+                <div class="folder-section">
+                    <h3>Uploads</h3>
+                    <div id="uploads-list" class="file-list"></div>
+                </div>
+            `;
+            
             updateFileList('downloads-list', data.downloads);
             updateFileList('screenshots-list', data.screenshots);
             updateFileList('uploads-list', data.uploads);
+            
+            // Add upload handler
+            document.getElementById('upload-file').addEventListener('change', handleFileUpload);
         });
 }
 
@@ -49,7 +72,11 @@ function updateFileList(elementId, files) {
     const element = document.getElementById(elementId);
     element.innerHTML = files.map(file => `
         <div class="file-item">
-            <span>${file.name}</span>
+            <div class="file-info">
+                <span class="material-icons">${getFileIcon(file.name)}</span>
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${formatFileSize(file.size)}</span>
+            </div>
             <div class="file-actions">
                 <button onclick="downloadFile('${file.path}')" title="Download">
                     <span class="material-icons">download</span>

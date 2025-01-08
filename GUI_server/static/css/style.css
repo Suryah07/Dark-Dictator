@@ -372,29 +372,30 @@ body {
 /* Storage Panel */
 .storage-panel {
     background: var(--surface-dark);
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 24px;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .storage-content {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    gap: 24px;
 }
 
 .folder-section {
     background: var(--card-dark);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 16px;
 }
 
 .folder-section h3 {
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
-    font-size: 16px;
-    color: var(--text-primary);
 }
 
 .file-list {
@@ -405,27 +406,75 @@ body {
 
 .file-item {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
     padding: 8px;
-    background: var(--surface-dark);
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
-    font-size: 14px;
+    transition: background 0.2s;
 }
 
-.file-item .file-actions {
+.file-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-name {
+    color: var(--text-primary);
+}
+
+.file-size {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.file-actions {
     display: flex;
     gap: 8px;
 }
 
-.file-item button {
-    padding: 4px;
-    min-width: 0;
+.file-actions button {
     background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.file-item button:hover {
+.file-actions button:hover {
     background: var(--primary-color);
+    color: white;
+}
+
+.upload-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upload-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
 .no-targets {
