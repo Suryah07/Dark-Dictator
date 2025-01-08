@@ -37,29 +37,39 @@ class Bot:
         logging.info(f"Bot initialized - ID: {self.id} | IP: {self.ip} | Connected at: {self.connected_time}")
 
     def reliable_send(self, data):
-        jsondata = json.dumps(data)
-        while True:
-            try:
-                self.target.send(jsondata.encode(ENCODING))
-                logging.debug(f"Data sent to Session {self.id}: {data}")
-                break
-            except BrokenPipeError:
-                logging.error(f"Broken pipe error for Session {self.id}")
-                break
-            except Exception as e:
-                logging.error(f"Error sending data to Session {self.id}: {e}")
-                break
+        try:
+            if isinstance(data, str):
+                data = data.encode(ENCODING)
+            elif isinstance(data, dict):
+                data = json.dumps(data).encode(ENCODING)
+            else:
+                data = str(data).encode(ENCODING)
+            
+            self.target.send(data)
+            logging.debug(f"Data sent to Session {self.id}: {data}")
+            return True
+        except BrokenPipeError:
+            logging.error(f"Broken pipe error for Session {self.id}")
+            return False
+        except Exception as e:
+            logging.error(f"Error sending data to Session {self.id}: {e}")
+            return False
 
     def reliable_recv(self):
         data = ''
         while True:
             try:
-                data += self.target.recv(1024).decode(ENCODING).rstrip()
-                result = json.loads(data)
-                logging.debug(f"Data received from Session {self.id}: {result}")
-                return result
-            except ValueError:
-                continue
+                chunk = self.target.recv(1024).decode(ENCODING).rstrip()
+                if not chunk:
+                    return None
+                data += chunk
+                try:
+                    result = json.loads(data)
+                    logging.debug(f"Data received from Session {self.id}: {result}")
+                    return result
+                except json.JSONDecodeError:
+                    # If not valid JSON, might need more data
+                    continue
             except socket.error as e:
                 logging.error(f"Socket error for Session {self.id}: {e}")
                 return None

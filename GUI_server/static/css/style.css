@@ -105,6 +105,7 @@ body {
     gap: 8px;
     margin-bottom: 12px;
     flex-shrink: 0;
+    position: relative;
 }
 
 .command-input input {
@@ -662,4 +663,75 @@ body {
 .clear-selection-button:hover {
     background: var(--primary-color);
     color: white;
+}
+
+/* Add these styles for command suggestions */
+.command-suggestions {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card-dark);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+    background: var(--surface-dark);
+}
+
+.suggestion-cmd {
+    color: var(--primary-color);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.suggestion-desc {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* Add syntax highlighting styles */
+.cmd-name {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.path {
+    color: #4CAF50;
+}
+
+.url {
+    color: #2196F3;
+    text-decoration: underline;
+}
+
+.ip {
+    color: #FFC107;
+}
+
+.success {
+    color: #4CAF50;
+}
+
+.error {
+    color: #F44336;
+}
+
+/* Make command input relative for suggestions positioning */
+.command-input {
+    position: relative;
 } 
