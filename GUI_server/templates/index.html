@@ -264,31 +264,18 @@
 
             <!-- Command Tab -->
             <div class="tab-pane" id="command-tab">
-                <div class="command-center">
-                    <div class="command-header">
-                        <div class="selected-agents">
-                            <span class="material-icons">group</span>
-                            <span class="selected-count">0 agents selected</span>
+                <div class="terminal">
+                    <div class="terminal-output" id="output"></div>
+                    <div class="terminal-input-line">
+                        <div class="terminal-prompt">
+                            <span class="terminal-prompt-user">user</span>
+                            <span class="terminal-prompt-at">@</span>
+                            <span class="terminal-prompt-host">c2-server</span>
+                            <span class="terminal-prompt-path">~/command</span>
+                            <span class="terminal-prompt-char">$</span>
                         </div>
-                        <div class="command-buttons">
-                            <button onclick="selectAllAgents()" class="command-button help-button">
-                                <span class="material-icons">select_all</span>
-                                Select All
-                            </button>
-                            <button onclick="clearSelection()" class="command-button clear-button">
-                                <span class="material-icons">clear_all</span>
-                                Clear Selection
-                            </button>
-                        </div>
-                    </div>
-                    <div id="output"></div>
-                    <div class="command-input-wrapper">
-                        <div class="command-input">
-                            <input type="text" id="command-input" placeholder="Enter command to send to selected agents..." autocomplete="off">
-                        </div>
-                        <button onclick="sendCommand()" class="send-button" title="Send command">
-                            <span class="material-icons">send</span>
-                        </button>
+                        <input type="text" id="command-input" class="terminal-input" 
+                               placeholder="Enter command..." autocomplete="off">
                     </div>
                 </div>
             </div>

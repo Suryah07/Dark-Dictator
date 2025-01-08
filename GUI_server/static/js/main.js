@@ -416,6 +416,7 @@ function appendToOutput(html) {
     const output = document.getElementById('output');
     if (output) {
         output.innerHTML += html;
+        scrollOutputToBottom();
     }
 }
 
@@ -423,7 +424,27 @@ function formatOutput(output) {
     if (typeof output !== 'string') {
         output = JSON.stringify(output, null, 2);
     }
-    return escapeHtml(output).replace(/\n/g, '<br>');
+    
+    // Escape HTML
+    output = escapeHtml(output);
+    
+    // Highlight commands
+    output = output.replace(/^(\$|\>)\s+(.+)$/gm, (match, prompt, cmd) => {
+        return `<span class="prompt">${prompt}</span> <span class="command">${highlightCommand(cmd)}</span>`;
+    });
+    
+    // Highlight paths and URLs
+    output = output.replace(/(?:^|\s)(\/[\w\-./]+)/g, ' <span class="path">$1</span>');
+    output = output.replace(/(https?:\/\/[^\s]+)/g, '<span class="url">$1</span>');
+    
+    // Highlight IP addresses
+    output = output.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/g, '<span class="ip">$1</span>');
+    
+    // Highlight success/error messages
+    output = output.replace(/^(Success|OK|Done):.+$/gm, '<span class="success">$&</span>');
+    output = output.replace(/^(Error|Failed|Warning):.+$/gm, '<span class="error">$&</span>');
+    
+    return output.replace(/\n/g, '<br>');
 }
 
 function escapeHtml(unsafe) {
@@ -964,4 +985,32 @@ function highlightCommand(cmd) {
         return `<span class="cmd-name">${command}</span>${args ? ' ' + args : ''}`;
     }
     return cmd;
-} 
+}
+
+function getCurrentPrompt() {
+    return `<span class="terminal-prompt-user">user</span>` +
+           `<span class="terminal-prompt-at">@</span>` +
+           `<span class="terminal-prompt-host">c2-server</span>` +
+           `<span class="terminal-prompt-path">~/command</span>` +
+           `<span class="terminal-prompt-char">$</span>`;
+}
+
+// Add command history navigation
+let commandHistory = [];
+let historyIndex = -1;
+
+document.getElementById('command-input').addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (historyIndex < commandHistory.length - 1) {
+            historyIndex++;
+            this.value = commandHistory[historyIndex];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (historyIndex > -1) {
+            historyIndex--;
+            this.value = historyIndex === -1 ? '' : commandHistory[historyIndex];
+        }
+    }
+}); 
