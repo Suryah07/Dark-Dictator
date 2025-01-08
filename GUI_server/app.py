@@ -538,7 +538,7 @@ def send_file_to_agent():
             
         bot = Bot.botList[session_id]
         
-        # Read file data
+        # Read file data directly from the uploaded file
         file_data = file.read()
         success, message = bot.upload_file(file_data, file.filename)
         

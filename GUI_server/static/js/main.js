@@ -524,23 +524,22 @@ function uploadFile(agentId) {
         const file = fileInput.files[0];
         if (!file) return;
 
-        // Send upload command
-        fetch('/api/send_command', {
+        // Create FormData and append file
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('session_id', agentId);
+
+        // Send file to server
+        fetch('/api/send_file', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                session_id: agentId,
-                command: `upload ${file.name}`
-            })
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.error) {
                 appendToTerminal(`Error uploading file: ${data.error}`, 'error', agentId);
             } else {
-                appendToTerminal(data.output, 'success', agentId);
+                appendToTerminal(data.message, 'success', agentId);
             }
         })
         .catch(error => {
@@ -554,14 +553,14 @@ function downloadFile(agentId) {
     const filename = prompt('Enter the file path to download:');
     if (!filename) return;
 
-    fetch('/api/send_command', {
+    fetch('/api/download_file', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             session_id: agentId,
-            command: `download ${filename}`
+            filename: filename
         })
     })
     .then(response => response.json())
@@ -569,7 +568,7 @@ function downloadFile(agentId) {
         if (data.error) {
             appendToTerminal(`Error downloading file: ${data.error}`, 'error', agentId);
         } else {
-            appendToTerminal(data.output, 'success', agentId);
+            appendToTerminal(data.message, 'success', agentId);
             if (data.path) {
                 appendToTerminal(`File saved to: ${data.path}`, 'info', agentId);
             }
