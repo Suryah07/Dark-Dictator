@@ -47,6 +47,26 @@
                         <div class="agent-list" id="agent-list"></div>
                     </div>
                     <div class="agent-tabs" id="agent-tabs"></div>
+                    <div class="terminal-container">
+                        <div class="progress-container" id="progress-container-${agentId}">
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                                <div class="progress-text">0%</div>
+                            </div>
+                            <div class="progress-status"></div>
+                        </div>
+                        <div class="terminal-output" id="terminal-output-${agentId}"></div>
+                        <div class="terminal-input-container">
+                            <div class="terminal-input">
+                                <span class="prompt">$</span>
+                                <input type="text" 
+                                       class="terminal-input-field" 
+                                       id="terminal-input-${agentId}" 
+                                       placeholder="Enter command..."
+                                       onkeypress="handleCommand(event, ${agentId})">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
