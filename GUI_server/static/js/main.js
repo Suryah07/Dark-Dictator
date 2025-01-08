@@ -98,11 +98,13 @@ function updateCommandCenter() {
         .then(response => response.json())
         .then(agents => {
             const agentList = document.getElementById('agent-list');
-            if (!agentList) return;
+            const tabsContainer = document.getElementById('agent-tabs');
+            if (!agentList || !tabsContainer) return;
 
             // Sort agents by last seen
             agents.sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
 
+            // Update agent list
             agentList.innerHTML = agents.map(agent => `
                 <div class="agent-card ${currentAgent === agent.id ? 'active' : ''}" 
                      onclick="selectAgent(${agent.id})">
@@ -116,10 +118,53 @@ function updateCommandCenter() {
                 </div>
             `).join('');
 
-            // If no agent is selected but we have agents, select the first one
-            if (!currentAgent && agents.length > 0) {
-                selectAgent(agents[0].id);
-            }
+            // Update or create tabs for each agent
+            tabsContainer.innerHTML = agents.map(agent => `
+                <div id="agent-tab-${agent.id}" class="agent-tab ${currentAgent === agent.id ? 'active' : ''}" style="display: ${currentAgent === agent.id ? 'flex' : 'none'}">
+                    <div class="agent-tab-header">
+                        <div class="agent-info">
+                            <span class="agent-name">${agent.alias || `Agent_${agent.id}`}</span>
+                            <span class="agent-details">
+                                ${agent.os_type || 'Unknown'} | ${agent.ip} | ${agent.username}
+                            </span>
+                        </div>
+                        <div class="agent-actions">
+                            <button onclick="uploadFile(${agent.id})" title="Upload File">
+                                <span class="material-icons">upload</span>
+                            </button>
+                            <button onclick="downloadFile(${agent.id})" title="Download File">
+                                <span class="material-icons">download</span>
+                            </button>
+                            <button onclick="terminateAgent(${agent.id})" title="Terminate">
+                                <span class="material-icons">power_settings_new</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="terminal-container">
+                        <div class="terminal-output" id="terminal-output-${agent.id}"></div>
+                        <div class="terminal-input-container">
+                            <div class="terminal-input">
+                                <span class="prompt">$</span>
+                                <input type="text" 
+                                       class="terminal-input-field" 
+                                       id="terminal-input-${agent.id}" 
+                                       placeholder="Enter command..."
+                                       onkeypress="handleCommand(event, ${agent.id})">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Initialize terminal inputs for new tabs
+            agents.forEach(agent => {
+                const input = document.getElementById(`terminal-input-${agent.id}`);
+                if (input) {
+                    input.addEventListener('keydown', function(e) {
+                        handleTerminalHistory(e, agent.id);
+                    });
+                }
+            });
         });
 }
 
@@ -494,4 +539,83 @@ function downloadFile(agentId) {
     .catch(error => {
         appendToTerminal(`Download failed: ${error}`, 'error');
     });
+}
+
+function handleCommand(event, agentId) {
+    if (event.key === 'Enter') {
+        const input = document.getElementById(`terminal-input-${agentId}`);
+        const command = input.value.trim();
+        if (!command) return;
+
+        // Add to history
+        if (!commandHistory[agentId]) {
+            commandHistory[agentId] = [];
+        }
+        commandHistory[agentId].unshift(command);
+        historyIndex = -1;
+
+        // Show command in terminal
+        appendToTerminal(`$ ${command}`, 'command', agentId);
+
+        // Send command
+        fetch('/api/send_command', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: agentId,
+                command: command
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                appendToTerminal(data.error, 'error', agentId);
+            } else {
+                if (typeof data.output === 'object') {
+                    if (data.output.error) {
+                        appendToTerminal(data.output.error, 'error', agentId);
+                    } else if (data.output.output) {
+                        appendToTerminal(data.output.output, 'output', agentId);
+                    } else {
+                        const output = Object.entries(data.output)
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join('\n');
+                        appendToTerminal(output, 'output', agentId);
+                    }
+                } else {
+                    appendToTerminal(data.output, 'output', agentId);
+                }
+            }
+        })
+        .catch(error => {
+            appendToTerminal(`Error: ${error.message}`, 'error', agentId);
+        });
+
+        input.value = '';
+    }
+}
+
+function appendToTerminal(text, type = 'output', agentId) {
+    const terminal = document.getElementById(`terminal-output-${agentId}`);
+    if (!terminal) return;
+
+    const div = document.createElement('div');
+    div.className = `terminal-${type}`;
+
+    if (typeof text === 'string') {
+        text.split('\n').forEach((line, index) => {
+            if (index > 0) {
+                terminal.appendChild(document.createElement('br'));
+            }
+            div.textContent = line;
+            terminal.appendChild(div.cloneNode(true));
+        });
+    } else {
+        div.textContent = String(text);
+        terminal.appendChild(div);
+    }
+
+    terminal.scrollTop = terminal.scrollHeight;
 } 
