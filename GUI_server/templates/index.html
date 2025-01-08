@@ -8,10 +8,15 @@
 </head>
 <body>
     <div class="container">
-        <div class="tab-navigation">
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
             <button class="tab-button active" data-tab="agents">
                 <span class="material-icons">devices</span>
                 Connected Agents
+            </button>
+            <button class="tab-button" data-tab="command">
+                <span class="material-icons">terminal</span>
+                Command Center
             </button>
             <button class="tab-button" data-tab="build">
                 <span class="material-icons">build</span>
@@ -21,53 +26,25 @@
                 <span class="material-icons">folder</span>
                 Storage
             </button>
-            <button class="tab-button" data-tab="command">
-                <span class="material-icons">terminal</span>
-                Command
-            </button>
-        </div>
+        </nav>
 
+        <!-- Tab Content -->
         <div class="tab-content">
             <!-- Agents Tab -->
-            <div class="tab-pane active" id="agents-tab">
+            <div id="agents-tab" class="tab-pane active">
                 <div class="agents-container">
                     <div class="targets-panel">
-                        <h2>
-                            <span class="material-icons">devices</span>
-                            Connected Agents
-                        </h2>
+                        <h2>Connected Agents</h2>
                         <div id="targets-list"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Build Tab -->
-            <div class="tab-pane" id="build-tab">
-                <div class="build-panel">
-                    <!-- Build content here -->
-                </div>
-            </div>
-
-            <!-- Storage Tab -->
-            <div class="tab-pane" id="storage-tab">
-                <div class="storage-panel">
-                    <h2>
-                        <span class="material-icons">folder</span>
-                        File Storage
-                    </h2>
-                    <div class="storage-content">
-                        <!-- Content will be dynamically populated -->
-                    </div>
-                </div>
-            </div>
-
             <!-- Command Tab -->
-            <div class="tab-pane" id="command-tab">
+            <div id="command-tab" class="tab-pane">
                 <div class="command-center">
                     <div class="agent-scroll">
-                        <div class="agent-list" id="agent-list">
-                            <!-- Agents will be populated here -->
-                        </div>
+                        <div class="agent-list" id="agent-list"></div>
                     </div>
                     <div class="command-interface">
                         <div class="no-agent-selected">
@@ -84,9 +61,25 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Build Tab -->
+            <div id="build-tab" class="tab-pane">
+                <div class="build-panel">
+                    <h2>Build Agent</h2>
+                    <!-- Build content here -->
+                </div>
+            </div>
+
+            <!-- Storage Tab -->
+            <div id="storage-tab" class="tab-pane">
+                <div class="storage-panel">
+                    <h2>File Storage</h2>
+                    <div class="storage-content"></div>
+                </div>
+            </div>
         </div>
     </div>
-    
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html> 
