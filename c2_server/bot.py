@@ -74,7 +74,7 @@ class Bot:
         \n''')
         
     def reliable_send(self, data):
-        jsondata = json.dumps(data)
+        jsondata = json.dumps(data) 
         while True:
             try:
                 self.target.send(jsondata.encode(ENCODING))
