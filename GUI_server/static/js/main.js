@@ -388,24 +388,53 @@ function terminateAgent(agentId) {
         })
     })
     .then(response => response.json())
-    .then(() => {
-        // Remove agent from UI immediately
-        const agentElement = document.querySelector(`.agent-item[data-id="${agentId}"]`);
-        if (agentElement) {
-            agentElement.remove();
-        }
-        
-        // If this was the current agent in command center, clear it
-        if (currentAgent === agentId) {
-            currentAgent = null;
-            const terminal = document.getElementById('terminal-output');
-            if (terminal) {
-                terminal.innerHTML = '<div class="terminal-error">Agent disconnected</div>';
-            }
-        }
-        
-        // Update command center agent list
-        updateCommandCenter();
+    .catch(() => {
+        // If there's an error (no response), we still want to remove the agent
+        console.log('No response from agent, forcing removal');
+        return { force_remove: true };
     })
-    .catch(error => console.error('Error terminating agent:', error));
+    .then((data) => {
+        // Remove agent from UI whether we got a response or not
+        removeAgentFromUI(agentId);
+        
+        // If we didn't get a response, force remove from server
+        if (data.force_remove) {
+            forceRemoveAgent(agentId);
+        }
+    })
+    .catch(error => console.error('Error in termination process:', error));
+}
+
+function removeAgentFromUI(agentId) {
+    // Remove from agents list
+    const agentElement = document.querySelector(`.agent-item[data-id="${agentId}"]`);
+    if (agentElement) {
+        agentElement.remove();
+    }
+    
+    // If this was the current agent in command center, clear it
+    if (currentAgent === agentId) {
+        currentAgent = null;
+        const terminal = document.getElementById('terminal-output');
+        if (terminal) {
+            terminal.innerHTML = '<div class="terminal-error">Agent disconnected</div>';
+        }
+    }
+    
+    // Update command center agent list
+    updateCommandCenter();
+}
+
+function forceRemoveAgent(agentId) {
+    // Force remove from server
+    fetch('/api/force_remove_agent', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId
+        })
+    })
+    .catch(error => console.error('Error forcing agent removal:', error));
 } 

