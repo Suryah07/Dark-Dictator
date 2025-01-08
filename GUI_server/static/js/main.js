@@ -652,12 +652,19 @@ function downloadFile(agentId) {
             filename: filename
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Download failed');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             throw new Error(data.error);
         }
-        appendToTerminal(data.message, 'success', agentId);
+        appendToTerminal(data.message || data.output, 'success', agentId);
         if (data.path) {
             appendToTerminal(`File saved to: ${data.path}`, 'info', agentId);
             // Create a download link

