@@ -40,7 +40,7 @@ class Bot:
         try:
             json_data = json.dumps(data)
             length = len(json_data)
-            length_header = f"{length:<10}".encode()  # Fixed length header
+            length_header = f"{length:<10}".encode()
             self.target.send(length_header)
             self.target.send(json_data.encode())
             return True
@@ -50,15 +50,11 @@ class Bot:
 
     def reliable_recv(self):
         try:
-            # First receive the length header
             length_header = self.target.recv(10).decode().strip()
             if not length_header:
                 return None
             
-            # Convert length header to int
             length = int(length_header)
-            
-            # Receive the actual data
             chunks = []
             bytes_received = 0
             while bytes_received < length:

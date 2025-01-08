@@ -230,7 +230,7 @@ function updateTargets() {
                             <div class="agent-header">
                                 <div class="status-badge ${isAgentActive(target.last_seen) ? 'online' : 'offline'}"></div>
                                 <div class="agent-name">${target.alias || `Agent_${target.id}`}</div>
-                                <div class="os-type">${target.os_type}</div>
+                                <div class="os-type">${target.os_type || 'Unknown'}</div>
                             </div>
                             <div class="agent-meta">
                                 <span>
@@ -245,12 +245,12 @@ function updateTargets() {
                             <div class="agent-system">
                                 <span>
                                     <span class="material-icons">computer</span>
-                                    ${target.hostname}
+                                    ${target.hostname || 'Unknown'}
                                 </span>
                                 <span>
                                     <span class="material-icons">person</span>
-                                    ${target.username}
-                                    ${target.is_admin ? '<span class="material-icons" title="Admin">admin_panel_settings</span>' : ''}
+                                    ${target.username || 'Unknown'}
+                                    ${target.is_admin === true ? '<span class="material-icons" title="Admin">admin_panel_settings</span>' : ''}
                                 </span>
                             </div>
                         </div>
@@ -274,6 +274,8 @@ function updateTargets() {
 
             // Update agent menu in command center
             updateAgentMenu();
+            
+            console.log('Updated targets:', targets); // Debug log
         })
         .catch(error => {
             console.error('Error fetching targets:', error);

