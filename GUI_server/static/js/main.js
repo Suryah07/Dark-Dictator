@@ -2,35 +2,43 @@ let currentSession = null;
 let selectedAgents = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Tab handling
+    // Initialize tabs
+    initializeTabs();
+    
+    // Start periodic updates
+    updateTargets();
+    setInterval(updateTargets, 7000);
+    
+    // Initialize storage
+    updateStorage();
+});
+
+function initializeTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
     
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            const tabName = button.dataset.tab;
+            // Get tab name from data attribute
+            const tabName = button.getAttribute('data-tab');
             
-            // Update buttons
+            // Remove active class from all buttons and panes
             tabButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            // Update panes
             tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding pane
+            button.classList.add('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
             
             // Refresh content if needed
             if (tabName === 'storage') {
                 updateStorage();
+            } else if (tabName === 'agents') {
+                updateTargets();
             }
         });
     });
-    
-    // Initialize storage
-    updateStorage();
-    
-    // Initialize command input
-    initializeCommandInput();
-});
+}
 
 function updateStorage() {
     fetch('/api/storage')
@@ -1077,3 +1085,107 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update every 7 seconds
     setInterval(updateTargets, 7000);
 }); 
+
+function updateAgentList() {
+    fetch('/api/targets')
+        .then(response => response.json())
+        .then(agents => {
+            const agentList = document.getElementById('agent-list');
+            if (!agentList) return;
+
+            agentList.innerHTML = agents.map(agent => `
+                <div class="agent-card ${currentAgent === agent.id ? 'active' : ''}" 
+                     onclick="selectAgent(${agent.id})">
+                    <div class="agent-card-header">
+                        <div class="agent-status ${isAgentActive(agent.last_seen) ? '' : 'offline'}"></div>
+                        <div class="agent-name">${agent.alias || `Agent_${agent.id}`}</div>
+                    </div>
+                    <div class="agent-meta">
+                        <span class="agent-ip">${agent.ip}</span>
+                        <span class="agent-os">${agent.os_type || 'Unknown'}</span>
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+let currentAgent = null;
+let commandHistory = [];
+let historyIndex = -1;
+
+function selectAgent(agentId) {
+    currentAgent = agentId;
+    const terminal = document.querySelector('.agent-terminal');
+    const noAgentMessage = document.querySelector('.no-agent-selected');
+    
+    // Update UI
+    document.querySelectorAll('.agent-card').forEach(card => {
+        card.classList.toggle('active', card.getAttribute('data-id') == agentId);
+    });
+    
+    terminal.style.display = 'flex';
+    noAgentMessage.style.display = 'none';
+    
+    // Clear terminal output
+    document.getElementById('terminal-output').innerHTML = '';
+    
+    // Focus input
+    document.getElementById('terminal-input').focus();
+}
+
+// Add command handling
+document.getElementById('terminal-input')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        const command = this.value.trim();
+        if (!command) return;
+        
+        if (!currentAgent) {
+            appendToTerminal('No agent selected', 'error');
+            return;
+        }
+        
+        // Add command to history
+        commandHistory.unshift(command);
+        historyIndex = -1;
+        
+        // Show command in terminal
+        appendToTerminal(`$ ${command}`, 'command');
+        
+        // Send command to server
+        fetch('/api/send_command', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: currentAgent,
+                command: command
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                appendToTerminal(data.error, 'error');
+            } else {
+                appendToTerminal(data.output);
+            }
+        })
+        .catch(error => {
+            appendToTerminal(`Error: ${error.message}`, 'error');
+        });
+        
+        this.value = '';
+    }
+});
+
+function appendToTerminal(text, type = 'output') {
+    const terminal = document.getElementById('terminal-output');
+    const div = document.createElement('div');
+    div.className = `terminal-${type}`;
+    div.textContent = text;
+    terminal.appendChild(div);
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Update agent list periodically
+setInterval(updateAgentList, 7000); 
