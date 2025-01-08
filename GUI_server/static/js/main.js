@@ -524,24 +524,27 @@ function uploadFile(agentId) {
         const file = fileInput.files[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('session_id', agentId);
-
-        fetch('/api/send_file', {
+        // Send upload command
+        fetch('/api/send_command', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: agentId,
+                command: `upload ${file.name}`
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                appendToTerminal(`Error uploading file: ${data.error}`, 'error');
+                appendToTerminal(`Error uploading file: ${data.error}`, 'error', agentId);
             } else {
-                appendToTerminal(data.message, 'success');
+                appendToTerminal(data.output, 'success', agentId);
             }
         })
         .catch(error => {
-            appendToTerminal(`Upload failed: ${error}`, 'error');
+            appendToTerminal(`Upload failed: ${error}`, 'error', agentId);
         });
     };
     fileInput.click();
@@ -551,26 +554,29 @@ function downloadFile(agentId) {
     const filename = prompt('Enter the file path to download:');
     if (!filename) return;
 
-    fetch('/api/download_file', {
+    fetch('/api/send_command', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             session_id: agentId,
-            filename: filename
+            command: `download ${filename}`
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            appendToTerminal(`Error downloading file: ${data.error}`, 'error');
+            appendToTerminal(`Error downloading file: ${data.error}`, 'error', agentId);
         } else {
-            appendToTerminal(data.message, 'success');
+            appendToTerminal(data.output, 'success', agentId);
+            if (data.path) {
+                appendToTerminal(`File saved to: ${data.path}`, 'info', agentId);
+            }
         }
     })
     .catch(error => {
-        appendToTerminal(`Download failed: ${error}`, 'error');
+        appendToTerminal(`Download failed: ${error}`, 'error', agentId);
     });
 }
 

