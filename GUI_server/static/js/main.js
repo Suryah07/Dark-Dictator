@@ -1,4 +1,5 @@
 let currentSession = null;
+let selectedAgents = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
     // Tab handling
@@ -98,15 +99,16 @@ function updateTargets() {
             targets.forEach(target => {
                 const targetElement = document.createElement('div');
                 targetElement.className = 'target-item';
-                if (currentSession === target.id) {
-                    targetElement.className += ' selected';
-                }
                 
                 const [ip, port] = target.ip.replace(/[()]/g, '').split(',');
                 const lastSeen = new Date(target.last_seen);
                 const timeAgo = getTimeAgo(lastSeen);
                 
                 targetElement.innerHTML = `
+                    <div class="agent-checkbox">
+                        <input type="checkbox" id="agent-${target.id}" 
+                            ${selectedAgents.has(target.id) ? 'checked' : ''}>
+                    </div>
                     <div class="agent-icon">
                         <span class="material-icons">${getOSIcon(target.os_type)}</span>
                     </div>
@@ -126,10 +128,6 @@ function updateTargets() {
                                     <span class="material-icons">schedule</span>
                                     ${timeAgo}
                                 </span>
-                                <span>
-                                    <span class="material-icons">memory</span>
-                                    Session #${target.id}
-                                </span>
                             </div>
                             <div class="agent-system">
                                 <span>
@@ -145,9 +143,83 @@ function updateTargets() {
                     </div>
                 `;
                 
-                targetElement.onclick = () => selectSession(target.id);
+                const checkbox = targetElement.querySelector(`#agent-${target.id}`);
+                checkbox.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    if (e.target.checked) {
+                        selectedAgents.add(target.id);
+                    } else {
+                        selectedAgents.delete(target.id);
+                    }
+                    updateSelectedCount();
+                });
+                
                 targetsList.appendChild(targetElement);
             });
+            
+            updateSelectedCount();
+        });
+}
+
+function updateSelectedCount() {
+    const count = selectedAgents.size;
+    const countElement = document.querySelector('.selected-count');
+    if (countElement) {
+        countElement.textContent = `${count} agent${count !== 1 ? 's' : ''} selected`;
+    }
+}
+
+function sendMultiCommand() {
+    if (selectedAgents.size === 0) {
+        appendToOutput(`<div class="error-output">No agents selected</div>`);
+        return;
+    }
+    
+    const commandInput = document.getElementById('command-input');
+    const command = commandInput.value.trim();
+    if (!command) return;
+    
+    // Clear input and add command to output
+    commandInput.value = '';
+    appendToOutput(`<div class="command-entry">
+        <span class="prompt">$</span>
+        <span class="command">${escapeHtml(command)} (to ${selectedAgents.size} agents)</span>
+    </div>`);
+    
+    // Show loading state
+    setLoading(true);
+    
+    // Send command to all selected agents
+    const promises = Array.from(selectedAgents).map(agentId => 
+        fetch('/api/send_command', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: agentId,
+                command: command
+            })
+        }).then(response => response.json())
+    );
+    
+    Promise.all(promises)
+        .then(results => {
+            results.forEach((data, index) => {
+                const agentId = Array.from(selectedAgents)[index];
+                if (data.error) {
+                    appendToOutput(`<div class="error-output">Agent ${agentId}: ${escapeHtml(data.error)}</div>`);
+                } else {
+                    appendToOutput(`<div class="command-output">Agent ${agentId}:\n${formatOutput(data.output)}</div>`);
+                }
+            });
+        })
+        .catch(error => {
+            appendToOutput(`<div class="error-output">Error: ${escapeHtml(error.message)}</div>`);
+        })
+        .finally(() => {
+            setLoading(false);
+            scrollOutputToBottom();
         });
 }
 
