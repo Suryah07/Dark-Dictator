@@ -7,12 +7,25 @@ let historyIndex = -1;
 const TRANSFER_STATUS_KEY = 'fileTransferStatus';
 
 function saveTransferStatus(status) {
-    localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify(status));
+    localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify({
+        ...status,
+        timestamp: Date.now()  // Add timestamp for expiry check
+    }));
 }
 
 function getTransferStatus() {
     const status = localStorage.getItem(TRANSFER_STATUS_KEY);
-    return status ? JSON.parse(status) : null;
+    if (!status) return null;
+    
+    const parsedStatus = JSON.parse(status);
+    
+    // Check if status is older than 1 hour (3600000 ms)
+    if (Date.now() - parsedStatus.timestamp > 3600000) {
+        clearTransferStatus();
+        return null;
+    }
+    
+    return parsedStatus;
 }
 
 function clearTransferStatus() {
@@ -24,9 +37,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check for ongoing transfer
     const transferStatus = getTransferStatus();
     if (transferStatus && transferStatus.inProgress) {
-        const { agentId, percent, status } = transferStatus;
-        showProgressBar(agentId, true);
-        updateProgressBar(agentId, percent, status);
+        // Wait a short moment for the agent tabs to be created
+        setTimeout(() => {
+            const { agentId, percent, status, operation } = transferStatus;
+            if (document.getElementById(`progress-${agentId}`)) {
+                showProgressBar(agentId, true, operation);
+                updateProgressBar(agentId, percent || 0, status);
+                
+                // If it's an upload operation that was interrupted, clear the status
+                if (operation && operation.type === 'upload') {
+                    setTimeout(() => {
+                        showProgressBar(agentId, false);
+                        clearTransferStatus();
+                        appendToTerminal('Upload interrupted by page refresh', 'error', agentId);
+                    }, 1500);
+                }
+            } else {
+                // If agent tab doesn't exist, clear the status
+                clearTransferStatus();
+            }
+        }, 500);
     }
 
     // Initialize tabs
