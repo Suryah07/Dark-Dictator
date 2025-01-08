@@ -68,7 +68,10 @@ function updateAgentsList() {
                 <div class="agent-item" data-id="${agent.id}">
                     <div class="agent-header">
                         <div class="status-badge ${isAgentActive(agent.last_seen) ? 'online' : 'offline'}"></div>
-                        <div class="agent-name">${agent.alias || `Agent_${agent.id}`}</div>
+                        <div class="agent-name" onclick="editAlias(${agent.id}, '${agent.alias || `Agent_${agent.id}`}')">
+                            <span>${agent.alias || `Agent_${agent.id}`}</span>
+                            <span class="material-icons edit-icon">edit</span>
+                        </div>
                         <div class="agent-os">${agent.os_type || 'Unknown'}</div>
                     </div>
                     <div class="agent-details">
@@ -322,4 +325,87 @@ function appendToTerminal(text, type = 'output') {
     }
     
     terminal.scrollTop = terminal.scrollHeight;
+}
+
+function editAlias(agentId, currentAlias) {
+    const agentName = document.querySelector(`.agent-item[data-id="${agentId}"] .agent-name`);
+    const currentName = currentAlias.startsWith('Agent_') ? '' : currentAlias;
+    
+    // Create input element
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.className = 'alias-input';
+    input.placeholder = `Agent_${agentId}`;
+    
+    // Replace span with input
+    agentName.innerHTML = '';
+    agentName.appendChild(input);
+    input.focus();
+    
+    // Handle input events
+    input.addEventListener('blur', () => saveAlias(agentId, input.value));
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            input.blur();
+        }
+    });
+}
+
+function saveAlias(agentId, newAlias) {
+    fetch('/api/set_alias', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId,
+            alias: newAlias.trim() || `Agent_${agentId}`
+        })
+    })
+    .then(response => response.json())
+    .then(() => {
+        // Refresh the agents list to show the new alias
+        updateAgentsList();
+    })
+    .catch(error => console.error('Error saving alias:', error));
+}
+
+function terminateAgent(agentId) {
+    if (!confirm('Are you sure you want to terminate this agent?')) {
+        return;
+    }
+
+    // Send quit command to agent
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId,
+            command: 'quit'
+        })
+    })
+    .then(response => response.json())
+    .then(() => {
+        // Remove agent from UI immediately
+        const agentElement = document.querySelector(`.agent-item[data-id="${agentId}"]`);
+        if (agentElement) {
+            agentElement.remove();
+        }
+        
+        // If this was the current agent in command center, clear it
+        if (currentAgent === agentId) {
+            currentAgent = null;
+            const terminal = document.getElementById('terminal-output');
+            if (terminal) {
+                terminal.innerHTML = '<div class="terminal-error">Agent disconnected</div>';
+            }
+        }
+        
+        // Update command center agent list
+        updateCommandCenter();
+    })
+    .catch(error => console.error('Error terminating agent:', error));
 } 
