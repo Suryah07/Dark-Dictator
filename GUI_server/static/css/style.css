@@ -329,15 +329,4 @@ h2 {
     padding: 2px 0;
     white-space: pre-wrap;
     word-break: break-word;
-}
-
-.terminal-input input:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.terminal-error {
-    color: var(--danger-color);
-    margin-top: 4px;
-    font-style: italic;
 } 

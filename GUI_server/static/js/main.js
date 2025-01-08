@@ -198,42 +198,25 @@ function selectAgent(agentId) {
         card.classList.toggle('active', card.getAttribute('onclick').includes(agentId));
     });
     
-    // Clear terminal output
-    const output = document.getElementById('terminal-output');
-    if (output) {
-        output.innerHTML = `Connected to Agent_${agentId}\n`;
-    }
+    const terminal = document.querySelector('.agent-terminal');
+    const noAgentMessage = document.querySelector('.no-agent-selected');
     
-    // Focus input
-    const input = document.getElementById('terminal-input');
-    if (input) {
-        input.focus();
+    if (terminal && noAgentMessage) {
+        terminal.style.display = 'flex';
+        noAgentMessage.style.display = 'none';
+        
+        // Clear terminal output
+        const output = document.getElementById('terminal-output');
+        if (output) {
+            output.innerHTML = `Connected to Agent_${agentId}\n`;
+        }
+        
+        // Focus input
+        const input = document.getElementById('terminal-input');
+        if (input) {
+            input.focus();
+        }
     }
-
-    // Check agent status immediately
-    checkAgentStatus(agentId);
-}
-
-function checkAgentStatus(agentId) {
-    fetch('/api/targets')
-        .then(response => response.json())
-        .then(agents => {
-            const agent = agents.find(a => a.id === agentId);
-            if (!agent || !isAgentActive(agent.last_seen)) {
-                appendToTerminal('Agent is offline', 'error');
-                const input = document.getElementById('terminal-input');
-                if (input) {
-                    input.disabled = true;
-                    input.placeholder = 'Agent offline - Commands disabled';
-                }
-            } else {
-                const input = document.getElementById('terminal-input');
-                if (input) {
-                    input.disabled = false;
-                    input.placeholder = 'Enter command...';
-                }
-            }
-        });
 }
 
 // Command handling
@@ -265,75 +248,57 @@ document.addEventListener('DOMContentLoaded', function() {
                     appendToTerminal('No agent selected', 'error');
                     return;
                 }
-
-                // Check agent status before sending command
-                fetch('/api/targets')
-                    .then(response => response.json())
-                    .then(agents => {
-                        const agent = agents.find(a => a.id === currentAgent);
-                        if (!agent || !isAgentActive(agent.last_seen)) {
-                            appendToTerminal('Cannot execute command: Agent is offline', 'error');
-                            return;
-                        }
-
-                        // Add command to history
-                        commandHistory.unshift(command);
-                        historyIndex = -1;
-                        
-                        // Show command in terminal
-                        appendToTerminal(`$ ${command}`, 'command');
-                        
-                        // Send command to server
-                        fetch('/api/send_command', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                session_id: currentAgent,
-                                command: command
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.error) {
-                                appendToTerminal(data.error, 'error');
+                
+                // Add command to history
+                commandHistory.unshift(command);
+                historyIndex = -1;
+                
+                // Show command in terminal
+                appendToTerminal(`$ ${command}`, 'command');
+                
+                // Send command to server
+                fetch('/api/send_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: currentAgent,
+                        command: command
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        appendToTerminal(data.error, 'error');
+                    } else {
+                        // Handle different response types
+                        if (typeof data.output === 'object') {
+                            if (data.output.error) {
+                                appendToTerminal(data.output.error, 'error');
+                            } else if (data.output.output) {
+                                appendToTerminal(data.output.output);
                             } else {
-                                // Handle different response types
-                                if (typeof data.output === 'object') {
-                                    if (data.output.error) {
-                                        appendToTerminal(data.output.error, 'error');
-                                    } else if (data.output.output) {
-                                        appendToTerminal(data.output.output);
-                                    } else {
-                                        // Pretty print the object
-                                        const output = Object.entries(data.output)
-                                            .map(([key, value]) => `${key}: ${value}`)
-                                            .join('\n');
-                                        appendToTerminal(output);
-                                    }
-                                } else {
-                                    appendToTerminal(data.output);
-                                }
+                                // Pretty print the object
+                                const output = Object.entries(data.output)
+                                    .map(([key, value]) => `${key}: ${value}`)
+                                    .join('\n');
+                                appendToTerminal(output);
                             }
-                        })
-                        .catch(error => {
-                            appendToTerminal(`Error: ${error.message}`, 'error');
-                        });
-                    });
+                        } else {
+                            appendToTerminal(data.output);
+                        }
+                    }
+                })
+                .catch(error => {
+                    appendToTerminal(`Error: ${error.message}`, 'error');
+                });
                 
                 this.value = '';
             }
         });
     }
 });
-
-// Add periodic status check for current agent
-setInterval(() => {
-    if (currentAgent) {
-        checkAgentStatus(currentAgent);
-    }
-}, 5000);
 
 function appendToTerminal(text, type = 'output') {
     const terminal = document.getElementById('terminal-output');
