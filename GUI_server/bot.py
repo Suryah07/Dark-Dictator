@@ -80,6 +80,13 @@ class Bot:
             return None
 
     def upload_file(self, file_data, filename):
+        """Upload a file to the agent.
+        Args:
+            file_data (bytes): The binary content of the file
+            filename (str): The name of the file
+        Returns:
+            tuple: (success, message)
+        """
         try:
             # Send command and file info
             command = {
@@ -118,6 +125,12 @@ class Bot:
             return False, f"Upload error: {str(e)}"
 
     def download_file(self, filename):
+        """Download a file from the agent.
+        Args:
+            filename (str): The name of the file to download
+        Returns:
+            tuple: (success, message, file_data)
+        """
         try:
             # Send download command
             command = {

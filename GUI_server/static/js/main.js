@@ -598,31 +598,39 @@ function forceRemoveAgent(agentId) {
 function uploadFile(agentId) {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.onchange = function() {
+    fileInput.onchange = async function() {
         const file = fileInput.files[0];
         if (!file) return;
+
+        // Show upload status
+        appendToTerminal(`Uploading file: ${file.name}...`, 'info', agentId);
 
         // Create FormData and append file
         const formData = new FormData();
         formData.append('file', file);
         formData.append('session_id', agentId);
 
-        // Send file to server
-        fetch('/api/send_file', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                appendToTerminal(`Error uploading file: ${data.error}`, 'error', agentId);
-            } else {
-                appendToTerminal(data.message, 'success', agentId);
+        try {
+            // Send file to server
+            const response = await fetch('/api/send_file', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Upload failed');
             }
-        })
-        .catch(error => {
-            appendToTerminal(`Upload failed: ${error}`, 'error', agentId);
-        });
+
+            if (data.success) {
+                appendToTerminal(data.message, 'success', agentId);
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (error) {
+            appendToTerminal(`Upload failed: ${error.message}`, 'error', agentId);
+        }
     };
     fileInput.click();
 }
@@ -630,6 +638,9 @@ function uploadFile(agentId) {
 function downloadFile(agentId) {
     const filename = prompt('Enter the file path to download:');
     if (!filename) return;
+
+    // Show download status
+    appendToTerminal(`Downloading file: ${filename}...`, 'info', agentId);
 
     fetch('/api/download_file', {
         method: 'POST',
@@ -644,16 +655,22 @@ function downloadFile(agentId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            appendToTerminal(`Error downloading file: ${data.error}`, 'error', agentId);
-        } else {
-            appendToTerminal(data.message, 'success', agentId);
-            if (data.path) {
-                appendToTerminal(`File saved to: ${data.path}`, 'info', agentId);
-            }
+            throw new Error(data.error);
+        }
+        appendToTerminal(data.message, 'success', agentId);
+        if (data.path) {
+            appendToTerminal(`File saved to: ${data.path}`, 'info', agentId);
+            // Create a download link
+            const link = document.createElement('a');
+            link.href = `/download_storage_file?path=${encodeURIComponent(data.path)}`;
+            link.download = filename.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     })
     .catch(error => {
-        appendToTerminal(`Download failed: ${error}`, 'error', agentId);
+        appendToTerminal(`Download failed: ${error.message}`, 'error', agentId);
     });
 }
 
@@ -672,6 +689,40 @@ function handleCommand(event, agentId) {
 
         // Show command in terminal
         appendToTerminal(`$ ${command}`, 'command', agentId);
+
+        // Handle file upload command separately
+        if (command.startsWith('upload ')) {
+            const filename = command.slice(7);
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.onchange = function() {
+                const file = fileInput.files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('session_id', agentId);
+                
+                fetch('/api/send_file', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        appendToTerminal(data.error, 'error', agentId);
+                    } else {
+                        appendToTerminal(data.message, 'success', agentId);
+                    }
+                })
+                .catch(error => {
+                    appendToTerminal(`Upload failed: ${error.message}`, 'error', agentId);
+                });
+            };
+            fileInput.click();
+            input.value = '';
+            return;
+        }
 
         // Send command
         fetch('/api/send_command', {

