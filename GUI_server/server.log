@@ -777,3 +777,43 @@
 2025-01-08 20:44:15,266 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "GET /api/targets HTTP/1.1" 200 -
 2025-01-08 20:44:15,271 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "GET /api/storage HTTP/1.1" 200 -
 2025-01-08 20:44:16,873 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:16] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:49:14,227 - INFO - Received shutdown signal, cleaning up...
+2025-01-08 20:49:14,227 - INFO - Initiating server shutdown...
+2025-01-08 20:49:14,228 - ERROR - Error accepting connection: [WinError 10038] An operation was attempted on something that is not a socket
+2025-01-08 20:49:14,228 - INFO - Closed main socket
+2025-01-08 20:49:14,229 - INFO - Received shutdown signal, cleaning up...
+2025-01-08 20:49:14,229 - INFO - Initiating server shutdown...
+2025-01-08 20:49:14,230 - INFO - Closed main socket
+2025-01-08 20:49:14,230 - INFO - Server shutdown complete
+2025-01-08 20:49:14,231 - INFO - Server stopped
+2025-01-08 20:50:41,002 - INFO - C2 Server started and listening for connections...
+2025-01-08 20:50:41,002 - INFO - Server started successfully
+2025-01-08 20:50:41,003 - INFO - Server started successfully
+2025-01-08 20:50:41,018 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-01-08 20:50:41,019 - INFO - [33mPress CTRL+C to quit[0m
+2025-01-08 20:50:43,209 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:43] "GET / HTTP/1.1" 200 -
+2025-01-08 20:50:43,469 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:43] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+2025-01-08 20:50:43,470 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:43] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-01-08 20:50:43,477 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:43] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:50:43,620 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:43] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:50:50,545 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:50] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:50:57,559 - INFO - 127.0.0.1 - - [08/Jan/2025 20:50:57] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:04,571 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:04] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:11,552 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:11] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:19,738 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:19] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:25,888 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:25] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:33,243 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:33] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:34,449 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:34] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:51:37,370 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:37] "GET / HTTP/1.1" 200 -
+2025-01-08 20:51:37,402 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:37] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-01-08 20:51:37,420 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:37] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+2025-01-08 20:51:37,449 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:37] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:37,456 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:37] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:51:44,547 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:44] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:51,568 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:51] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:51:58,553 - INFO - 127.0.0.1 - - [08/Jan/2025 20:51:58] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:52:05,546 - INFO - 127.0.0.1 - - [08/Jan/2025 20:52:05] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:52:12,553 - INFO - 127.0.0.1 - - [08/Jan/2025 20:52:12] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:52:19,556 - INFO - 127.0.0.1 - - [08/Jan/2025 20:52:19] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:52:26,566 - INFO - 127.0.0.1 - - [08/Jan/2025 20:52:26] "GET /api/targets HTTP/1.1" 200 -

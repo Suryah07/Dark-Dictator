@@ -176,31 +176,76 @@ function selectSession(sessionId) {
     currentSession = sessionId;
     const commandPanel = document.querySelector('.command-panel');
     const sessionInfo = document.getElementById('current-session');
-    const target = Bot.botList[sessionId];
     
-    // Update UI to show command panel
+    // Show command panel
     commandPanel.classList.add('active');
     
-    // Update session info
-    sessionInfo.innerHTML = `
-        <div class="session-title">
-            <span class="material-icons">computer</span>
-            Session ${sessionId}
-            <span class="status">(Connected)</span>
-        </div>
-        <div class="session-details">
-            IP: ${target.ip}<br>
-            Alias: ${target.alias}
-        </div>
-    `;
-    
-    // Clear previous output
-    document.getElementById('output').textContent = '';
-    
-    // Focus command input
-    document.getElementById('command-input').focus();
-    
-    updateTargets();
+    // Get target info
+    fetch('/api/targets')
+        .then(response => response.json())
+        .then(targets => {
+            const target = targets.find(t => t.id === sessionId);
+            if (!target) return;
+            
+            // Update session info
+            sessionInfo.innerHTML = `
+                <div class="session-header">
+                    <div class="session-title">
+                        <span class="material-icons">${getOSIcon(target.os_type)}</span>
+                        Session ${target.id} - ${target.alias}
+                        <div class="status-badge online"></div>
+                    </div>
+                    <div class="session-details">
+                        <div>
+                            <span class="material-icons">computer</span>
+                            ${target.hostname} (${target.os_type})
+                        </div>
+                        <div>
+                            <span class="material-icons">person</span>
+                            ${target.username} ${target.is_admin ? '(Admin)' : '(User)'}
+                        </div>
+                        <div>
+                            <span class="material-icons">router</span>
+                            ${target.ip.replace(/[()]/g, '').split(',')[0]}
+                        </div>
+                    </div>
+                </div>
+                <div class="command-output" id="output"></div>
+                <div class="command-input">
+                    <input type="text" id="command-input" placeholder="Enter command...">
+                    <button onclick="sendCommand()" class="send-button">
+                        <span class="material-icons">send</span>
+                        Send
+                    </button>
+                </div>
+                <div class="command-buttons">
+                    <button onclick="showHelp()" class="help-button">
+                        <span class="material-icons">help_outline</span>
+                        Help
+                    </button>
+                    <button onclick="clearOutput()" class="clear-button">
+                        <span class="material-icons">clear_all</span>
+                        Clear
+                    </button>
+                    <button onclick="terminateSession(${target.id})" class="danger-button">
+                        <span class="material-icons">power_settings_new</span>
+                        Terminate
+                    </button>
+                </div>
+            `;
+            
+            // Focus command input
+            document.getElementById('command-input').focus();
+            
+            // Add command history support
+            const commandInput = document.getElementById('command-input');
+            commandInput.addEventListener('keydown', handleCommandHistory);
+            commandInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendCommand();
+                }
+            });
+        });
 }
 
 function deselectSession() {
@@ -208,10 +253,7 @@ function deselectSession() {
     const commandPanel = document.querySelector('.command-panel');
     const sessionInfo = document.getElementById('current-session');
     
-    // Hide command panel
     commandPanel.classList.remove('active');
-    
-    // Update session info
     sessionInfo.innerHTML = `
         <div class="no-session-message">
             <span class="material-icons">terminal_off</span>
@@ -219,8 +261,6 @@ function deselectSession() {
             <div>Click on a session to start commanding</div>
         </div>
     `;
-    
-    updateTargets();
 }
 
 function setLoading(isLoading) {
@@ -235,58 +275,167 @@ function setLoading(isLoading) {
 }
 
 function sendCommand() {
-    if (!currentSession && document.getElementById('command-input').value !== 'help') {
-        alert('Please select a session first');
-        return;
-    }
+    if (!currentSession) return;
     
     const commandInput = document.getElementById('command-input');
-    const command = commandInput.value;
-    
+    const command = commandInput.value.trim();
     if (!command) return;
     
+    // Clear input and add command to output
+    commandInput.value = '';
+    appendToOutput(`<div class="command-entry">
+        <span class="prompt">$</span>
+        <span class="command">${escapeHtml(command)}</span>
+    </div>`);
+    
+    // Show loading state
     setLoading(true);
     
+    // Send command to server
     fetch('/api/send_command', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            session_id: currentSession || 0,
+            session_id: currentSession,
             command: command
         })
     })
     .then(response => response.json())
     .then(data => {
-        const output = document.getElementById('output');
-        if (command === 'help') {
-            output.innerHTML += `\n> ${command}\n<div class="help-text">${formatHelpText(data.result)}</div>\n`;
+        if (data.error) {
+            appendToOutput(`<div class="error-output">${escapeHtml(data.error)}</div>`);
         } else {
-            output.textContent += `\n> ${command}\n${data.result || data.message}\n`;
-        }
-        output.scrollTop = output.scrollHeight;
-        commandInput.value = '';
-        
-        if (command === 'quit') {
-            currentSession = null;
-            document.getElementById('current-session').textContent = 'None';
-            updateTargets();
-        }
-        
-        if (command) {
-            commandHistory.push(command);
-            commandIndex = -1;
+            appendToOutput(`<div class="command-output">${formatOutput(data.output)}</div>`);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Error sending command');
+        appendToOutput(`<div class="error-output">Error: ${escapeHtml(error.message)}</div>`);
     })
     .finally(() => {
         setLoading(false);
+        scrollOutputToBottom();
     });
 }
+
+function appendToOutput(html) {
+    const output = document.getElementById('output');
+    if (output) {
+        output.innerHTML += html;
+    }
+}
+
+function formatOutput(output) {
+    if (typeof output !== 'string') {
+        output = JSON.stringify(output, null, 2);
+    }
+    return escapeHtml(output).replace(/\n/g, '<br>');
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function scrollOutputToBottom() {
+    const output = document.getElementById('output');
+    if (output) {
+        output.scrollTop = output.scrollHeight;
+    }
+}
+
+function clearOutput() {
+    const output = document.getElementById('output');
+    if (output) {
+        output.innerHTML = '';
+    }
+}
+
+// Add command history support
+let commandHistory = [];
+let historyIndex = -1;
+
+function handleCommandHistory(e) {
+    const commandInput = document.getElementById('command-input');
+    
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (historyIndex < commandHistory.length - 1) {
+            historyIndex++;
+            commandInput.value = commandHistory[historyIndex];
+        }
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (historyIndex > -1) {
+            historyIndex--;
+            commandInput.value = historyIndex >= 0 ? commandHistory[historyIndex] : '';
+        }
+    }
+}
+
+// Add CSS for command interface
+const commandStyle = document.createElement('style');
+commandStyle.textContent = `
+    .command-output {
+        background: var(--card-dark);
+        border-radius: 4px;
+        padding: 12px;
+        margin: 8px 0;
+        font-family: 'Roboto Mono', monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .command-entry {
+        color: var(--primary-color);
+        margin: 8px 0;
+        font-family: 'Roboto Mono', monospace;
+    }
+
+    .command-entry .prompt {
+        color: var(--success-color);
+        margin-right: 8px;
+    }
+
+    .error-output {
+        color: var(--danger-color);
+        background: rgba(244, 67, 54, 0.1);
+        border-radius: 4px;
+        padding: 12px;
+        margin: 8px 0;
+        font-family: 'Roboto Mono', monospace;
+    }
+
+    #output {
+        height: 400px;
+        overflow-y: auto;
+        padding: 12px;
+        background: var(--card-dark);
+        border-radius: 8px;
+        margin-bottom: 12px;
+    }
+
+    .loading {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+`;
+
+document.head.appendChild(commandStyle);
 
 function uploadFile() {
     const fileInput = document.getElementById('file-input');
@@ -346,11 +495,6 @@ function formatHelpText(text) {
                .replace(/\n/g, '<br>');
 }
 
-function clearOutput() {
-    const output = document.getElementById('output');
-    output.textContent = '';
-}
-
 // Update targets list every 7 seconds
 const UPDATE_INTERVAL = 7000;
 
@@ -380,29 +524,6 @@ startTargetUpdates();
 document.getElementById('command-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         sendCommand();
-    }
-});
-
-// Update the command input to support command history
-let commandHistory = [];
-let commandIndex = -1;
-
-document.getElementById('command-input').addEventListener('keydown', function(e) {
-    if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (commandHistory.length > 0 && commandIndex < commandHistory.length - 1) {
-            commandIndex++;
-            this.value = commandHistory[commandHistory.length - 1 - commandIndex];
-        }
-    } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (commandIndex > 0) {
-            commandIndex--;
-            this.value = commandHistory[commandHistory.length - 1 - commandIndex];
-        } else if (commandIndex === 0) {
-            commandIndex = -1;
-            this.value = '';
-        }
     }
 });
 
@@ -585,4 +706,59 @@ function getOSIcon(osType) {
     if (osLower.includes('linux') || osLower.includes('ubuntu') || osLower.includes('kali')) return 'laptop_linux';
     if (osLower.includes('mac') || osLower.includes('macos')) return 'laptop_mac';
     return 'devices';
-} 
+}
+
+// Add CSS for command panel
+const style = document.createElement('style');
+style.textContent = `
+    .command-panel {
+        display: none;
+        background: var(--surface-dark);
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .command-panel.active {
+        display: block;
+    }
+
+    .session-header {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--card-dark);
+    }
+
+    .session-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 12px;
+    }
+
+    .session-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    .session-details div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .danger-button {
+        background: var(--danger-color);
+    }
+
+    .danger-button:hover {
+        background: #d32f2f;
+    }
+`;
+
+document.head.appendChild(style); 
