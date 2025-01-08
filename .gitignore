@@ -12,4 +12,3 @@ agent_client/build/agent/agent.pkg
 agent_client/dist/agent.exe
 GUI_server/server.log
 GUI_server/server.log
-*.log
