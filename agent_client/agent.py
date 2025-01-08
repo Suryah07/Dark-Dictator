@@ -83,8 +83,11 @@ def handle_file_transfer(command_data):
                 filename = command_data['filename']
                 file_size = int(command_data['size'])  # Ensure size is an integer
                 
+                print(f"[*] Receiving file: {filename} ({file_size} bytes)")
+                
                 # Send ready confirmation
                 reliable_send({'ready': True})
+                print("[*] Sent ready confirmation")
                 
                 # Receive and save file
                 received = 0
@@ -95,40 +98,54 @@ def handle_file_transfer(command_data):
                             break
                         f.write(chunk)
                         received += len(chunk)
+                        print(f"[*] Received: {received}/{file_size} bytes")
                 
                 if received == file_size:
+                    print("[*] File received successfully")
                     reliable_send({'success': True})
                 else:
+                    print("[!] Upload incomplete")
                     reliable_send({'error': 'Upload incomplete'})
                     
             except (ValueError, TypeError) as e:
+                print(f"[!] Invalid file size: {e}")
                 reliable_send({'error': f'Invalid file size: {str(e)}'})
             except Exception as e:
+                print(f"[!] Upload error: {e}")
                 reliable_send({'error': str(e)})
                 
         elif command_data['command'] == 'download':
             try:
                 filename = command_data['filename']
+                print(f"[*] Sending file: {filename}")
+                
                 try:
                     with open(filename, 'rb') as f:
                         file_data = f.read()
                         
                     # Send file size first
-                    reliable_send({
-                        'size': len(file_data)
-                    })
+                    size_info = {'size': len(file_data)}
+                    print(f"[*] Sending file size: {len(file_data)} bytes")
+                    reliable_send(size_info)
                     
                     # Send file data
+                    print("[*] Sending file data...")
                     s.sendall(file_data)
+                    print("[*] File sent successfully")
                     
                 except FileNotFoundError:
+                    print(f"[!] File not found: {filename}")
                     reliable_send({'error': 'File not found'})
                 except Exception as e:
+                    print(f"[!] Error reading file: {e}")
                     reliable_send({'error': str(e)})
+                    
             except Exception as e:
+                print(f"[!] Download error: {e}")
                 reliable_send({'error': str(e)})
                 
     except Exception as e:
+        print(f"[!] File transfer error: {e}")
         try:
             reliable_send({'error': str(e)})
         except:
