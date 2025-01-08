@@ -130,6 +130,9 @@ class Bot:
             filename (str): The name of the file to download
         Returns:
             tuple: (success, message, file_data)
+                success (bool): Whether the download was successful
+                message (str): Status message or error message
+                file_data (bytes or None): The file data if successful, None otherwise
         """
         try:
             # Send download command

@@ -203,6 +203,7 @@ def send_command():
         elif command.startswith('download '):
             filename = command[9:]  # Get filename after 'download '
             try:
+                # Unpack exactly 3 values
                 success, message, file_data = bot.download_file(filename)
                 if success and file_data is not None:
                     # Save the file in downloads directory
@@ -219,10 +220,12 @@ def send_command():
                     return jsonify({
                         'error': message
                     }), 500
+            except ValueError as e:
+                logging.error(f"Value error in download: {str(e)}")
+                return jsonify({'error': 'Invalid response from agent'}), 500
             except Exception as e:
-                return jsonify({
-                    'error': f'Download error: {str(e)}'
-                }), 500
+                logging.error(f"Download error: {str(e)}")
+                return jsonify({'error': f'Download error: {str(e)}'}), 500
 
         # For quit command
         elif command == 'quit':
@@ -595,6 +598,7 @@ def download_file_from_agent():
         
         # Download file from agent
         try:
+            # Unpack exactly 3 values
             success, message, file_data = bot.download_file(filename)
             
             if not success or file_data is None:
@@ -613,6 +617,9 @@ def download_file_from_agent():
                 'message': message,
                 'path': save_path
             })
+        except ValueError as e:
+            logging.error(f"Value error in download: {str(e)}")
+            return jsonify({'error': 'Invalid response from agent'}), 500
         except Exception as e:
             logging.error(f"Error downloading file: {str(e)}")
             return jsonify({'error': f'Download error: {str(e)}'}), 500
