@@ -22,8 +22,11 @@ body {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 12px;
     box-sizing: border-box;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .header {
@@ -306,7 +309,7 @@ body {
 .tab-navigation {
     display: flex;
     gap: 4px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     background: var(--surface-dark);
     padding: 8px;
     border-radius: 8px;
@@ -318,15 +321,18 @@ body {
     gap: 8px;
     padding: 12px 24px;
     background: transparent;
+    border: none;
     color: var(--text-secondary);
     border-radius: 6px;
+    cursor: pointer;
     transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .tab-button:hover {
     background: var(--card-dark);
     color: var(--text-primary);
-    transform: translateY(0);
 }
 
 .tab-button.active {
@@ -337,10 +343,14 @@ body {
 /* Tab Content */
 .tab-content {
     position: relative;
+    height: calc(100vh - 80px);
+    overflow: hidden;
+    flex-grow: 1;
 }
 
 .tab-pane {
     display: none;
+    height: 100%;
     animation: fadeIn 0.3s ease;
 }
 
@@ -1022,4 +1032,141 @@ body {
 .error { color: #F44336; }
 .warning { color: #FFC107; }
 .ip { color: #9C27B0; }
-.url { color: #00BCD4; } 
+.url { color: #00BCD4; }
+
+/* Update target item styles */
+.target-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--card-dark);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+}
+
+.target-item:hover {
+    background: var(--surface-dark);
+}
+
+.target-item.selected {
+    background: var(--primary-color);
+}
+
+.agent-info {
+    flex-grow: 1;
+}
+
+.agent-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.agent-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.agent-meta, .agent-system {
+    display: flex;
+    gap: 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.agent-meta span, .agent-system span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-color);
+}
+
+.status-badge.offline {
+    background: var(--text-secondary);
+}
+
+/* Remove command prompt from agents page */
+.agents-container .command-input {
+    display: none;
+}
+
+/* Agent Menu Bar */
+.agent-menubar {
+    background: var(--card-dark);
+    border-radius: 8px 8px 0 0;
+    padding: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.agent-menu-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) transparent;
+}
+
+.agent-menu-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+
+.agent-menu-scroll::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.agent-menu-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.agent-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.agent-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.agent-menu-item.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.agent-menu-item .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success-color);
+}
+
+.agent-menu-item .agent-alias {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.agent-menu-item .agent-id {
+    font-size: 11px;
+    opacity: 0.7;
+} 

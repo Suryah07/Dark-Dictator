@@ -8,14 +8,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <pre class="title">{{ title | safe }}</pre>
-            <div class="header-info">
-                <span class="material-icons" title="Command & Control Server">security</span>
-                <span>v1.0</span>
-            </div>
-        </div>
-        
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="agents">
                 <span class="material-icons">devices</span>
@@ -45,51 +37,6 @@
                             Connected Agents
                         </h2>
                         <div id="targets-list"></div>
-                    </div>
-                    
-                    <div class="command-panel">
-                        <div id="current-session">
-                            <div class="no-session-message">
-                                <span class="material-icons">terminal_off</span>
-                                <div>No active session selected</div>
-                                <div>Click on a session to start commanding</div>
-                            </div>
-                        </div>
-                        
-                        <div class="command-input">
-                            <input type="text" id="command-input" placeholder="Enter command...">
-                            <button onclick="sendCommand()" class="send-button">
-                                <span class="material-icons">send</span>
-                                Send
-                            </button>
-                        </div>
-                        
-                        <div class="command-buttons">
-                            <button onclick="showHelp()" class="help-button">
-                                <span class="material-icons">help_outline</span>
-                                Help
-                            </button>
-                            <button onclick="clearOutput()" class="clear-button">
-                                <span class="material-icons">clear_all</span>
-                                Clear
-                            </button>
-                        </div>
-                        
-                        <div class="file-upload">
-                            <label for="file-input">
-                                <span class="material-icons">upload_file</span>
-                                Choose File
-                            </label>
-                            <input type="file" id="file-input">
-                            <button onclick="uploadFile()" class="send-button">
-                                <span class="material-icons">cloud_upload</span>
-                                Upload
-                            </button>
-                        </div>
-                        
-                        <div class="command-output">
-                            <pre id="output"></pre>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -254,12 +201,17 @@
             <!-- Command Tab -->
             <div class="tab-pane" id="command-tab">
                 <div class="terminal">
+                    <div class="agent-menubar">
+                        <div class="agent-menu-scroll">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
                     <div class="terminal-output" id="output"></div>
                     <div class="terminal-input-line">
                         <div class="terminal-prompt">
                             <span class="terminal-prompt-user">user</span>
                             <span class="terminal-prompt-at">@</span>
-                            <span class="terminal-prompt-host">c2-server</span>
+                            <span class="terminal-prompt-host" id="current-agent">no-agent</span>
                             <span class="terminal-prompt-path">~/command</span>
                             <span class="terminal-prompt-char">$</span>
                         </div>
