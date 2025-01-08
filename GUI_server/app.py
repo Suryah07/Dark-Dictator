@@ -123,7 +123,7 @@ def accept_connections():
         except Exception as e:
             logging.error(f"Error accepting connection: {e}")
 
-@app.route('/')
+@app.route('/') 
 def index():
     return render_template('index.html', title=title())
 
