@@ -118,51 +118,68 @@ function updateCommandCenter() {
                 </div>
             `).join('');
 
-            // Update or create tabs for each agent
-            tabsContainer.innerHTML = agents.map(agent => `
-                <div id="agent-tab-${agent.id}" class="agent-tab ${currentAgent === agent.id ? 'active' : ''}" style="display: ${currentAgent === agent.id ? 'flex' : 'none'}">
-                    <div class="agent-tab-header">
-                        <div class="agent-info">
-                            <span class="agent-name">${agent.alias || `Agent_${agent.id}`}</span>
-                            <span class="agent-details">
-                                ${agent.os_type || 'Unknown'} | ${agent.ip} | ${agent.username}
-                            </span>
-                        </div>
-                        <div class="agent-actions">
-                            <button onclick="uploadFile(${agent.id})" title="Upload File">
-                                <span class="material-icons">upload</span>
-                            </button>
-                            <button onclick="downloadFile(${agent.id})" title="Download File">
-                                <span class="material-icons">download</span>
-                            </button>
-                            <button onclick="terminateAgent(${agent.id})" title="Terminate">
-                                <span class="material-icons">power_settings_new</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="terminal-container">
-                        <div class="terminal-output" id="terminal-output-${agent.id}"></div>
-                        <div class="terminal-input-container">
-                            <div class="terminal-input">
-                                <span class="prompt">$</span>
-                                <input type="text" 
-                                       class="terminal-input-field" 
-                                       id="terminal-input-${agent.id}" 
-                                       placeholder="Enter command..."
-                                       onkeypress="handleCommand(event, ${agent.id})">
+            // Only update or create tabs that don't exist yet
+            agents.forEach(agent => {
+                let agentTab = document.getElementById(`agent-tab-${agent.id}`);
+                
+                // If tab doesn't exist, create it
+                if (!agentTab) {
+                    const tabHTML = `
+                        <div id="agent-tab-${agent.id}" class="agent-tab ${currentAgent === agent.id ? 'active' : ''}" 
+                             style="display: ${currentAgent === agent.id ? 'flex' : 'none'}">
+                            <div class="agent-tab-header">
+                                <div class="agent-info">
+                                    <span class="agent-name">${agent.alias || `Agent_${agent.id}`}</span>
+                                    <span class="agent-details">
+                                        ${agent.os_type || 'Unknown'} | ${agent.ip} | ${agent.username}
+                                    </span>
+                                </div>
+                                <div class="agent-actions">
+                                    <button onclick="uploadFile(${agent.id})" title="Upload File">
+                                        <span class="material-icons">upload</span>
+                                    </button>
+                                    <button onclick="downloadFile(${agent.id})" title="Download File">
+                                        <span class="material-icons">download</span>
+                                    </button>
+                                    <button onclick="terminateAgent(${agent.id})" title="Terminate">
+                                        <span class="material-icons">power_settings_new</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="terminal-container">
+                                <div class="terminal-output" id="terminal-output-${agent.id}"></div>
+                                <div class="terminal-input-container">
+                                    <div class="terminal-input">
+                                        <span class="prompt">$</span>
+                                        <input type="text" 
+                                               class="terminal-input-field" 
+                                               id="terminal-input-${agent.id}" 
+                                               placeholder="Enter command..."
+                                               onkeypress="handleCommand(event, ${agent.id})">
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                    tabsContainer.insertAdjacentHTML('beforeend', tabHTML);
+                    
+                    // Initialize terminal input for new tab
+                    const input = document.getElementById(`terminal-input-${agent.id}`);
+                    if (input) {
+                        input.addEventListener('keydown', function(e) {
+                            handleTerminalHistory(e, agent.id);
+                        });
+                    }
+                }
+            });
 
-            // Initialize terminal inputs for new tabs
-            agents.forEach(agent => {
-                const input = document.getElementById(`terminal-input-${agent.id}`);
-                if (input) {
-                    input.addEventListener('keydown', function(e) {
-                        handleTerminalHistory(e, agent.id);
-                    });
+            // Only remove tabs for agents that have been explicitly terminated
+            const existingTabs = tabsContainer.querySelectorAll('.agent-tab');
+            existingTabs.forEach(tab => {
+                const tabId = parseInt(tab.id.replace('agent-tab-', ''));
+                const agentExists = agents.some(agent => agent.id === tabId);
+                if (!agentExists && tab.dataset.terminated === 'true') {
+                    tab.remove();
                 }
             });
         });
@@ -419,6 +436,12 @@ function saveAlias(agentId, newAlias) {
 function terminateAgent(agentId) {
     if (!confirm('Are you sure you want to terminate this agent?')) {
         return;
+    }
+
+    // Mark the tab as terminated
+    const agentTab = document.getElementById(`agent-tab-${agentId}`);
+    if (agentTab) {
+        agentTab.dataset.terminated = 'true';
     }
 
     // Send quit command to agent
