@@ -178,17 +178,24 @@ def send_command():
         # Send command to agent
         bot.reliable_send(command)
         
-        # If command is quit, remove the bot from the list
+        # If command is quit, handle termination
         if command == 'quit':
             try:
-                # Try to get response but don't wait too long
+                # Wait briefly for termination response
                 response = bot.reliable_recv(timeout=2)
+                if response and response.get('status') == 'terminating':
+                    logging.info(f"Agent {session_id} confirmed termination")
             except:
-                response = None
+                logging.warning(f"No termination confirmation from agent {session_id}")
             finally:
+                # Force cleanup
+                try:
+                    bot.target.shutdown(socket.SHUT_RDWR)
+                except:
+                    pass
                 bot.target.close()
                 del Bot.botList[session_id]
-                logging.info(f"Agent {session_id} terminated")
+                logging.info(f"Agent {session_id} terminated and cleaned up")
                 return jsonify({
                     'success': True,
                     'message': 'Agent terminated'
@@ -210,9 +217,13 @@ def send_command():
         
     except Exception as e:
         logging.error(f"Error executing command on Session {session_id}: {e}")
-        # If there's an error and it was a quit command, still remove the bot
+        # If there's an error and it was a quit command, ensure cleanup
         if command == 'quit' and session_id in Bot.botList:
-            del Bot.botList[session_id]
+            try:
+                bot.target.close()
+                del Bot.botList[session_id]
+            except:
+                pass
         return jsonify({
             'error': f'Command execution failed: {str(e)}'
         }), 500
@@ -460,6 +471,10 @@ def force_remove_agent():
     try:
         # Force close the connection
         bot = Bot.botList[session_id]
+        try:
+            bot.target.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
         bot.target.close()
         del Bot.botList[session_id]
         logging.info(f"Agent {session_id} forcefully removed")

