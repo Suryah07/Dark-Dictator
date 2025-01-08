@@ -3,8 +3,32 @@ let currentAgent = null;
 let commandHistory = [];
 let historyIndex = -1;
 
+// Transfer status management
+const TRANSFER_STATUS_KEY = 'fileTransferStatus';
+
+function saveTransferStatus(status) {
+    localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify(status));
+}
+
+function getTransferStatus() {
+    const status = localStorage.getItem(TRANSFER_STATUS_KEY);
+    return status ? JSON.parse(status) : null;
+}
+
+function clearTransferStatus() {
+    localStorage.removeItem(TRANSFER_STATUS_KEY);
+}
+
 // Initialize when document loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for ongoing transfer
+    const transferStatus = getTransferStatus();
+    if (transferStatus && transferStatus.inProgress) {
+        const { agentId, percent, status } = transferStatus;
+        showProgressBar(agentId, true);
+        updateProgressBar(agentId, percent, status);
+    }
+
     // Initialize tabs
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
@@ -135,43 +159,7 @@ function updateCommandCenter() {
                 
                 // If tab doesn't exist, create it
                 if (!agentTab) {
-                    const tabHTML = `
-                        <div id="agent-tab-${agent.id}" class="agent-tab ${currentAgent === agent.id ? 'active' : ''}" 
-                             style="display: ${currentAgent === agent.id ? 'flex' : 'none'}">
-                            <div class="agent-tab-header">
-                                <div class="agent-info">
-                                    <span class="agent-name">${agent.alias || `Agent_${agent.id}`}</span>
-                                    <span class="agent-details">
-                                        ${agent.os_type || 'Unknown'} | ${agent.ip} | ${agent.username}
-                                    </span>
-                                </div>
-                                <div class="agent-actions">
-                                    <button onclick="uploadFile(${agent.id})" title="Upload File">
-                                        <span class="material-icons">upload</span>
-                                    </button>
-                                    <button onclick="downloadFile(${agent.id})" title="Download File">
-                                        <span class="material-icons">download</span>
-                                    </button>
-                                    <button onclick="terminateAgent(${agent.id})" title="Terminate">
-                                        <span class="material-icons">power_settings_new</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="terminal-container">
-                                <div class="terminal-output" id="terminal-output-${agent.id}"></div>
-                                <div class="terminal-input-container">
-                                    <div class="terminal-input">
-                                        <span class="prompt">$</span>
-                                        <input type="text" 
-                                               class="terminal-input-field" 
-                                               id="terminal-input-${agent.id}" 
-                                               placeholder="Enter command..."
-                                               onkeypress="handleCommand(event, ${agent.id})">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    const tabHTML = createAgentTab(agent.id, agent);
                     tabsContainer.insertAdjacentHTML('beforeend', tabHTML);
                     
                     // Initialize terminal input for new tab
@@ -194,6 +182,99 @@ function updateCommandCenter() {
                 }
             });
         });
+}
+
+function createAgentTab(agentId, agentInfo) {
+                    const tabHTML = `
+        <div id="agent-tab-${agentId}" class="agent-tab ${currentAgent === agentId ? 'active' : ''}" 
+             style="display: ${currentAgent === agentId ? 'flex' : 'none'}">
+                            <div class="agent-tab-header">
+                                <div class="agent-info">
+                    <span class="agent-name">${agentInfo.alias || `Agent_${agentId}`}</span>
+                                    <span class="agent-details">
+                        ${agentInfo.os_type || 'Unknown'} | ${agentInfo.ip} | ${agentInfo.username}
+                                    </span>
+                                </div>
+                                <div class="agent-actions">
+                    <button onclick="uploadFile(${agentId})" title="Upload File">
+                                        <span class="material-icons">upload</span>
+                                    </button>
+                    <button onclick="downloadFile(${agentId})" title="Download File">
+                                        <span class="material-icons">download</span>
+                                    </button>
+                    <button onclick="terminateAgent(${agentId})" title="Terminate">
+                                        <span class="material-icons">power_settings_new</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="terminal-container">
+                <div class="terminal-progress" id="progress-${agentId}">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">0%</div>
+                    <div class="progress-status">Transferring...</div>
+                </div>
+                <div class="terminal-output" id="terminal-output-${agentId}"></div>
+                                <div class="terminal-input-container">
+                                    <div class="terminal-input">
+                                        <span class="prompt">$</span>
+                                        <input type="text" 
+                                               class="terminal-input-field" 
+                               id="terminal-input-${agentId}" 
+                                               placeholder="Enter command..."
+                               onkeypress="handleCommand(event, ${agentId})">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+    return tabHTML;
+}
+
+function showProgressBar(agentId, show = true, operation = null) {
+    const progressBar = document.getElementById(`progress-${agentId}`);
+    if (progressBar) {
+        if (show && operation) {
+            saveTransferStatus({
+                agentId: agentId,
+                inProgress: true,
+                operation: operation,
+                percent: 0,
+                status: operation.status
+            });
+        } else {
+            clearTransferStatus();
+        }
+        progressBar.style.display = show ? 'block' : 'none';
+    }
+}
+
+function updateProgressBar(agentId, percent, status = null) {
+    const progressBar = document.getElementById(`progress-${agentId}`);
+    if (!progressBar) return;
+
+    const fill = progressBar.querySelector('.progress-fill');
+    const text = progressBar.querySelector('.progress-text');
+    const statusDiv = progressBar.querySelector('.progress-status');
+
+    if (fill && text) {
+        fill.style.width = `${percent}%`;
+        text.textContent = `${percent.toFixed(1)}%`;
+        if (status && statusDiv) {
+            statusDiv.textContent = status;
+        }
+
+        // Save current progress
+        const currentStatus = getTransferStatus();
+        if (currentStatus && currentStatus.agentId === agentId) {
+            saveTransferStatus({
+                ...currentStatus,
+                percent: percent,
+                status: status || currentStatus.status
+            });
+        }
+    }
 }
 
 // Build Tab Functions
@@ -595,27 +676,6 @@ function forceRemoveAgent(agentId) {
     .catch(error => console.error('Error forcing agent removal:', error));
 }
 
-function showProgressOverlay(show = true) {
-    const overlay = document.getElementById('progress-overlay');
-    if (overlay) {
-        overlay.style.display = show ? 'flex' : 'none';
-    }
-}
-
-function updateProgress(percent, status = null) {
-    const fill = document.querySelector('.progress-fill');
-    const text = document.querySelector('.progress-text');
-    const statusDiv = document.querySelector('.progress-status');
-
-    if (fill && text) {
-        fill.style.width = `${percent}%`;
-        text.textContent = `${percent.toFixed(1)}%`;
-        if (status && statusDiv) {
-            statusDiv.textContent = status;
-        }
-    }
-}
-
 function uploadFile(agentId) {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -625,8 +685,12 @@ function uploadFile(agentId) {
 
         // Show upload status and progress bar
         appendToTerminal(`Uploading file: ${file.name}...`, 'info', agentId);
-        showProgressOverlay(true);
-        updateProgress(0, `Uploading ${file.name}`);
+        showProgressBar(agentId, true, {
+            type: 'upload',
+            filename: file.name,
+            status: `Uploading ${file.name}`
+        });
+        updateProgressBar(agentId, 0, `Uploading ${file.name}`);
 
         // Create FormData and append file
         const formData = new FormData();
@@ -641,7 +705,7 @@ function uploadFile(agentId) {
             xhr.upload.onprogress = function(e) {
                 if (e.lengthComputable) {
                     const percent = (e.loaded / e.total) * 100;
-                    updateProgress(percent, `Uploading ${file.name}`);
+                    updateProgressBar(agentId, percent, `Uploading ${file.name}`);
                 }
             };
             
@@ -664,8 +728,9 @@ function uploadFile(agentId) {
             // Wait for completion
             const data = await uploadPromise;
             
-            // Hide progress bar
-            showProgressOverlay(false);
+            // Hide progress bar and clear status
+            showProgressBar(agentId, false);
+            clearTransferStatus();
 
             if (data.success) {
                 appendToTerminal(data.message, 'success', agentId);
@@ -673,7 +738,8 @@ function uploadFile(agentId) {
                 throw new Error(data.error || 'Upload failed');
             }
         } catch (error) {
-            showProgressOverlay(false);
+            showProgressBar(agentId, false);
+            clearTransferStatus();
             appendToTerminal(`Upload failed: ${error.message}`, 'error', agentId);
         }
     };
@@ -686,8 +752,12 @@ function downloadFile(agentId) {
 
     // Show download status and progress bar
     appendToTerminal(`Downloading file: ${filename}...`, 'info', agentId);
-    showProgressOverlay(true);
-    updateProgress(0, `Downloading ${filename}`);
+    showProgressBar(agentId, true, {
+        type: 'download',
+        filename: filename,
+        status: `Downloading ${filename}`
+    });
+    updateProgressBar(agentId, 0, `Downloading ${filename}`);
 
     fetch('/api/download_file', {
         method: 'POST',
@@ -713,9 +783,10 @@ function downloadFile(agentId) {
         }
         
         // Show 100% progress on success
-        updateProgress(100, `Downloaded ${filename}`);
+        updateProgressBar(agentId, 100, `Downloaded ${filename}`);
         setTimeout(() => {
-            showProgressOverlay(false);
+            showProgressBar(agentId, false);
+            clearTransferStatus();
         }, 1000);
         
         appendToTerminal(data.message || data.output, 'success', agentId);
@@ -731,7 +802,8 @@ function downloadFile(agentId) {
         }
     })
     .catch(error => {
-        showProgressOverlay(false);
+        showProgressBar(agentId, false);
+        clearTransferStatus();
         appendToTerminal(`Download failed: ${error.message}`, 'error', agentId);
     });
 }
