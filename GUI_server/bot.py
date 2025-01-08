@@ -80,7 +80,7 @@ class Bot:
             return None
 
     def upload_file(self, file_data, filename):
-        """Upload a file to the agent.
+        """Upload a file to the agent. 
         Args:
             file_data (bytes): The binary content of the file
             filename (str): The name of the file (basename only)
