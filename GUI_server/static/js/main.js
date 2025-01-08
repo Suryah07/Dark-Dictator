@@ -219,7 +219,7 @@ function selectAgent(agentId) {
     }
 }
 
-// Add command handling
+// Command handling
 document.addEventListener('DOMContentLoaded', function() {
     const terminalInput = document.getElementById('terminal-input');
     if (terminalInput) {
@@ -256,7 +256,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.error) {
                         appendToTerminal(data.error, 'error');
                     } else {
-                        appendToTerminal(data.output);
+                        // Handle different response types
+                        if (typeof data.output === 'object') {
+                            if (data.output.error) {
+                                appendToTerminal(data.output.error, 'error');
+                            } else if (data.output.output) {
+                                appendToTerminal(data.output.output);
+                            } else {
+                                // Pretty print the object
+                                const output = Object.entries(data.output)
+                                    .map(([key, value]) => `${key}: ${value}`)
+                                    .join('\n');
+                                appendToTerminal(output);
+                            }
+                        } else {
+                            appendToTerminal(data.output);
+                        }
                     }
                 })
                 .catch(error => {
@@ -267,10 +282,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Start periodic updates
-    updateCommandCenter();
-    setInterval(updateCommandCenter, 5000);
 });
 
 function appendToTerminal(text, type = 'output') {
@@ -279,7 +290,20 @@ function appendToTerminal(text, type = 'output') {
     
     const div = document.createElement('div');
     div.className = `terminal-${type}`;
-    div.textContent = text;
-    terminal.appendChild(div);
+    
+    // Handle multiline text
+    if (typeof text === 'string') {
+        text.split('\n').forEach((line, index) => {
+            if (index > 0) {
+                terminal.appendChild(document.createElement('br'));
+            }
+            div.textContent = line;
+            terminal.appendChild(div.cloneNode(true));
+        });
+    } else {
+        div.textContent = String(text);
+        terminal.appendChild(div);
+    }
+    
     terminal.scrollTop = terminal.scrollHeight;
 } 
