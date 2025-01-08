@@ -86,7 +86,7 @@ class Bot:
                 break
 
     def reliable_recv(self):
-        data = ''
+        data = '' # Initialize data as an empty string
         while True:
             try:
                 data += self.target.recv(1024).decode(ENCODING).rstrip()
