@@ -80,15 +80,26 @@ function updateAgentsList() {
                         <span><i class="material-icons">router</i>${agent.ip}</span>
                     </div>
                     <div class="agent-actions">
-                        <button onclick="commandAgent(${agent.id})" title="Command">
+                        <button onclick="event.stopPropagation(); commandAgent(${agent.id})" title="Command">
                             <span class="material-icons">terminal</span>
                         </button>
-                        <button onclick="terminateAgent(${agent.id})" title="Terminate">
+                        <button onclick="event.stopPropagation(); terminateAgent(${agent.id})" title="Terminate">
                             <span class="material-icons">power_settings_new</span>
                         </button>
                     </div>
                 </div>
             `).join('');
+
+            // Make entire agent item clickable
+            const agentItems = targetsList.querySelectorAll('.agent-item');
+            agentItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.closest('button') && !e.target.closest('.agent-name')) {
+                        const agentId = parseInt(item.dataset.id);
+                        commandAgent(agentId);
+                    }
+                });
+            });
         });
 }
 
@@ -251,37 +262,36 @@ function isAgentActive(lastSeen) {
 }
 
 function commandAgent(agentId) {
-    currentAgent = agentId;
+    // Switch to command tab first
     document.querySelector('[data-tab="command"]').click();
-}
-
-function selectAgent(agentId) {
+    
+    // Set current agent
     currentAgent = agentId;
     
-    // Update UI
-    document.querySelectorAll('.agent-card').forEach(card => {
-        card.classList.toggle('active', card.getAttribute('onclick').includes(agentId));
+    // Hide all agent tabs
+    document.querySelectorAll('.agent-tab').forEach(tab => {
+        tab.style.display = 'none';
     });
     
-    const terminal = document.querySelector('.agent-terminal');
-    const noAgentMessage = document.querySelector('.no-agent-selected');
-    
-    if (terminal && noAgentMessage) {
-        terminal.style.display = 'flex';
-        noAgentMessage.style.display = 'none';
-        
-        // Clear terminal output
-        const output = document.getElementById('terminal-output');
-        if (output) {
-            output.innerHTML = `Connected to Agent_${agentId}\n`;
-        }
-        
-        // Focus input
-        const input = document.getElementById('terminal-input');
+    // Show the selected agent's tab
+    const agentTab = document.getElementById(`agent-tab-${agentId}`);
+    if (agentTab) {
+        agentTab.style.display = 'flex';
+        // Focus on the terminal input
+        const input = document.getElementById(`terminal-input-${agentId}`);
         if (input) {
             input.focus();
         }
     }
+    
+    // Update agent list to show active state
+    document.querySelectorAll('.agent-card').forEach(card => {
+        card.classList.toggle('active', card.getAttribute('onclick').includes(agentId));
+    });
+}
+
+function selectAgent(agentId) {
+    commandAgent(agentId);
 }
 
 // Command handling
