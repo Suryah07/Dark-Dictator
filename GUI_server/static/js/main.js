@@ -608,7 +608,7 @@ function uploadFile(agentId) {
         // Create FormData and append file
         const formData = new FormData();
         formData.append('file', file);
-        // formData.append('session_id', agentId);
+        formData.append('session_id', agentId);
 
         try {
             // Send file to server

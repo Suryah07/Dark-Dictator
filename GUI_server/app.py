@@ -185,6 +185,7 @@ def send_command():
             try:
                 with open(filename, 'rb') as f:
                     file_data = f.read()
+                # Only pass file_data and basename of the file
                 success, message = bot.upload_file(file_data, os.path.basename(filename))
                 return jsonify({
                     'success': success,
@@ -551,7 +552,10 @@ def send_file_to_agent():
         
         # Read file data directly from the uploaded file
         file_data = file.read()
-        filename = os.path.basename(file.filename)  # Ensure we only use the filename
+        # Ensure we only use the basename of the file
+        filename = os.path.basename(secure_filename(file.filename))
+        
+        # Call upload_file with only file_data and filename
         success, message = bot.upload_file(file_data, filename)
         
         if success:

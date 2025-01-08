@@ -83,7 +83,7 @@ class Bot:
         """Upload a file to the agent.
         Args:
             file_data (bytes): The binary content of the file
-            filename (str): The name of the file
+            filename (str): The name of the file (basename only)
         Returns:
             tuple: (success, message)
         """
@@ -91,7 +91,7 @@ class Bot:
             # Send command and file info
             command = {
                 'command': 'upload',
-                'filename': filename,
+                'filename': os.path.basename(filename),  # Ensure we only use basename
                 'size': len(file_data)
             }
             if not self.reliable_send(command):
