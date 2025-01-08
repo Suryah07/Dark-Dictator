@@ -755,3 +755,25 @@
 2025-01-07 23:54:12,727 - INFO - 127.0.0.1 - - [07/Jan/2025 23:54:12] "GET /api/targets HTTP/1.1" 200 -
 2025-01-07 23:54:20,696 - INFO - 127.0.0.1 - - [07/Jan/2025 23:54:20] "GET /api/targets HTTP/1.1" 200 -
 2025-01-07 23:54:42,852 - INFO - 127.0.0.1 - - [07/Jan/2025 23:54:42] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:44:10,860 - INFO - C2 Server started and listening for connections...
+2025-01-08 20:44:10,860 - INFO - Server started successfully
+2025-01-08 20:44:10,861 - INFO - Server started successfully
+2025-01-08 20:44:10,880 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-01-08 20:44:10,881 - INFO - [33mPress CTRL+C to quit[0m
+2025-01-08 20:44:12,911 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:12] "GET / HTTP/1.1" 200 -
+2025-01-08 20:44:13,190 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:13] "GET /static/css/style.css HTTP/1.1" 200 -
+2025-01-08 20:44:13,191 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:13] "GET /static/js/main.js HTTP/1.1" 200 -
+2025-01-08 20:44:13,285 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:13] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:44:13,296 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:13] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:44:14,812 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:14] "GET / HTTP/1.1" 200 -
+2025-01-08 20:44:14,825 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:14] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-01-08 20:44:14,826 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:14] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+2025-01-08 20:44:14,832 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:14] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:44:14,839 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:14] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:44:15,243 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "GET / HTTP/1.1" 200 -
+2025-01-08 20:44:15,255 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-01-08 20:44:15,260 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+2025-01-08 20:44:15,266 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "GET /api/targets HTTP/1.1" 200 -
+2025-01-08 20:44:15,271 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:15] "GET /api/storage HTTP/1.1" 200 -
+2025-01-08 20:44:16,873 - INFO - 127.0.0.1 - - [08/Jan/2025 20:44:16] "GET /api/storage HTTP/1.1" 200 -

@@ -103,8 +103,8 @@ function updateTargets() {
                 }
                 
                 const [ip, port] = target.ip.replace(/[()]/g, '').split(',');
-                const connectedTime = new Date(target.connected_time);
-                const timeAgo = getTimeAgo(connectedTime);
+                const lastSeen = new Date(target.last_seen);
+                const timeAgo = getTimeAgo(lastSeen);
                 
                 targetElement.innerHTML = `
                     <div class="agent-icon">
@@ -131,17 +131,16 @@ function updateTargets() {
                                     Session #${target.id}
                                 </span>
                             </div>
-                        </div>
-                        <div class="agent-actions">
-                            <button class="agent-action" onclick="event.stopPropagation(); selectSession(${target.id})" title="Command">
-                                <span class="material-icons">terminal</span>
-                            </button>
-                            <button class="agent-action" onclick="event.stopPropagation(); renameSession(${target.id})" title="Rename">
-                                <span class="material-icons">edit</span>
-                            </button>
-                            <button class="agent-action" onclick="event.stopPropagation(); terminateSession(${target.id})" title="Terminate">
-                                <span class="material-icons">close</span>
-                            </button>
+                            <div class="agent-system">
+                                <span>
+                                    <span class="material-icons">computer</span>
+                                    ${target.hostname}
+                                </span>
+                                <span>
+                                    <span class="material-icons">person</span>
+                                    ${target.username}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 `;

