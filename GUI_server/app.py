@@ -455,19 +455,28 @@ def get_build_status(build_id):
 def get_storage():
     storage_data = {
         'downloads': get_files_in_directory('downloads'),
-        'screenshots': get_files_in_directory('images/screenshots'),
-        'uploads': get_files_in_directory('uploads')
+        'screenshots': get_files_in_directory('images/screenshots')
     }
     return jsonify(storage_data)
+
+@app.route('/api/download_storage_file')
+def download_storage_file():
+    path = request.args.get('path')
+    if not path or not is_safe_path(path):
+        return jsonify({'error': 'Invalid file path'}), 400
+        
+    try:
+        return send_file(path, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/delete_file', methods=['POST'])
 def delete_file():
     data = request.get_json()
     path = data.get('path')
     
-    # Validate path is within allowed directories
-    if not is_safe_path(path):
-        return jsonify({'error': 'Invalid path'}), 400
+    if not path or not is_safe_path(path):
+        return jsonify({'error': 'Invalid file path'}), 400
         
     try:
         os.remove(path)

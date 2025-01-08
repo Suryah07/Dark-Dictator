@@ -235,23 +235,101 @@ function updateStorage() {
             storageContent.innerHTML = `
                 <div class="storage-section">
                     <h3>Downloads</h3>
-                    <div class="file-list" id="downloads-list"></div>
+                    <div class="file-list" id="downloads-list">
+                        ${renderFileList(data.downloads)}
+                    </div>
                 </div>
                 <div class="storage-section">
                     <h3>Screenshots</h3>
-                    <div class="file-list" id="screenshots-list"></div>
-                </div>
-                <div class="upload-section">
-                    <input type="file" id="file-upload" hidden>
-                    <button onclick="document.getElementById('file-upload').click()">
-                        <span class="material-icons">upload_file</span>
-                        Upload File
-                    </button>
+                    <div class="file-list" id="screenshots-list">
+                        ${renderFileList(data.screenshots)}
+                    </div>
                 </div>
             `;
-            updateFileList('downloads-list', data.downloads);
-            updateFileList('screenshots-list', data.screenshots);
+
+            // Add event listeners for file actions
+            addFileActionListeners();
         });
+}
+
+function renderFileList(files) {
+    if (!files || files.length === 0) {
+        return '<div class="no-files">No files found</div>';
+    }
+
+    return files.map(file => `
+        <div class="file-item" data-path="${file.path}">
+            <div class="file-info">
+                <span class="file-name">
+                    <span class="material-icons">description</span>
+                    ${file.name}
+                </span>
+                <span class="file-size">${formatFileSize(file.size)}</span>
+                <span class="file-date">${formatDate(file.modified)}</span>
+            </div>
+            <div class="file-actions">
+                <button onclick="downloadStorageFile('${file.path}')" title="Download">
+                    <span class="material-icons">download</span>
+                </button>
+                <button onclick="deleteFile('${file.path}')" title="Delete">
+                    <span class="material-icons">delete</span>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function formatFileSize(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = 0;
+    
+    while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+    }
+    
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function formatDate(timestamp) {
+    return new Date(timestamp * 1000).toLocaleString();
+}
+
+function downloadStorageFile(path) {
+    // Create a temporary link to download the file
+    const link = document.createElement('a');
+    link.href = `/api/download_storage_file?path=${encodeURIComponent(path)}`;
+    link.download = path.split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function deleteFile(path) {
+    if (!confirm('Are you sure you want to delete this file?')) {
+        return;
+    }
+
+    fetch('/api/delete_file', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: path })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error deleting file: ${data.error}`);
+        } else {
+            // Refresh the storage view
+            updateStorage();
+        }
+    })
+    .catch(error => {
+        alert(`Error: ${error}`);
+    });
 }
 
 // Helper Functions
