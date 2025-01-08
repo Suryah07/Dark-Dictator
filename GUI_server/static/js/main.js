@@ -200,4 +200,113 @@ function sendCommand() {
         setLoading(false);
         scrollOutputToBottom();
     });
-} 
+}
+
+// Add these functions for agent management
+function updateTargets() {
+    fetch('/api/targets')
+        .then(response => response.json())
+        .then(targets => {
+            const targetsList = document.getElementById('targets-list');
+            if (!targetsList) return;
+
+            if (targets.length === 0) {
+                targetsList.innerHTML = `
+                    <div class="no-targets">
+                        <span class="material-icons">devices_off</span>
+                        <p>No agents connected</p>
+                    </div>`;
+                return;
+            }
+
+            targetsList.innerHTML = targets.map(target => `
+                <div class="target-item" data-id="${target.id}">
+                    <div class="agent-checkbox">
+                        <input type="checkbox" id="agent-${target.id}" 
+                               ${selectedAgents.has(target.id) ? 'checked' : ''}>
+                    </div>
+                    <div class="agent-info">
+                        <div class="agent-details">
+                            <div class="agent-header">
+                                <div class="status-badge ${isAgentActive(target.last_seen) ? 'online' : 'offline'}"></div>
+                                <div class="agent-name">${target.alias || `Agent_${target.id}`}</div>
+                                <div class="os-type">${target.os_type}</div>
+                            </div>
+                            <div class="agent-meta">
+                                <span>
+                                    <span class="material-icons">router</span>
+                                    ${target.ip}
+                                </span>
+                                <span>
+                                    <span class="material-icons">schedule</span>
+                                    ${getTimeAgo(new Date(target.last_seen))}
+                                </span>
+                            </div>
+                            <div class="agent-system">
+                                <span>
+                                    <span class="material-icons">computer</span>
+                                    ${target.hostname}
+                                </span>
+                                <span>
+                                    <span class="material-icons">person</span>
+                                    ${target.username}
+                                    ${target.is_admin ? '<span class="material-icons" title="Admin">admin_panel_settings</span>' : ''}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers for agent selection
+            document.querySelectorAll('.agent-checkbox input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const agentId = parseInt(checkbox.id.replace('agent-', ''));
+                    if (checkbox.checked) {
+                        selectedAgents.add(agentId);
+                    } else {
+                        selectedAgents.delete(agentId);
+                    }
+                    updateSelectedCount();
+                    updateAgentMenu();
+                });
+            });
+
+            // Update agent menu in command center
+            updateAgentMenu();
+        })
+        .catch(error => {
+            console.error('Error fetching targets:', error);
+        });
+}
+
+function isAgentActive(lastSeen) {
+    const lastSeenDate = new Date(lastSeen);
+    const now = new Date();
+    // Consider agent active if last seen within last 30 seconds
+    return (now - lastSeenDate) < 30000;
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'just now';
+    if (seconds < 120) return '1 minute ago';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+    if (seconds < 7200) return '1 hour ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+    return date.toLocaleDateString();
+}
+
+// Initialize when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Start periodic updates
+    updateTargets();
+    setInterval(updateTargets, 7000);
+
+    // Initialize other components
+    initializeTabs();
+    initializeCommandInput();
+    updateStorage();
+}); 

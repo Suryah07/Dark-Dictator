@@ -492,10 +492,9 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 200px;
+    padding: 40px;
     color: var(--text-secondary);
     text-align: center;
-    padding: 20px;
 }
 
 .no-targets .material-icons {
@@ -1039,7 +1038,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 16px;
     background: var(--card-dark);
     border-radius: 8px;
     margin-bottom: 8px;
@@ -1062,12 +1061,31 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+}
+
+.status-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-color);
+}
+
+.status-badge.offline {
+    background: var(--text-secondary);
 }
 
 .agent-name {
     font-weight: 500;
     color: var(--text-primary);
+}
+
+.os-type {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
 }
 
 .agent-meta, .agent-system {
@@ -1083,15 +1101,10 @@ body {
     gap: 4px;
 }
 
-.status-badge {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--success-color);
-}
-
-.status-badge.offline {
-    background: var(--text-secondary);
+.agent-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
 
 /* Remove command prompt from agents page */
