@@ -47,15 +47,13 @@
                         <div class="agent-list" id="agent-list"></div>
                     </div>
                     <div class="command-interface">
-                        <div class="no-agent-selected">
-                            <span class="material-icons">terminal_off</span>
-                            <p>Select an agent to start commanding</p>
-                        </div>
-                        <div class="agent-terminal" style="display: none;">
+                        <div class="terminal-container">
                             <div class="terminal-output" id="terminal-output"></div>
-                            <div class="terminal-input">
-                                <div class="prompt">$</div>
-                                <input type="text" id="terminal-input" placeholder="Enter command...">
+                            <div class="terminal-input-container">
+                                <div class="terminal-input">
+                                    <span class="prompt">$</span>
+                                    <input type="text" id="terminal-input" placeholder="Enter command...">
+                                </div>
                             </div>
                         </div>
                     </div>
