@@ -210,12 +210,11 @@ function selectSession(sessionId) {
                         </div>
                     </div>
                 </div>
-                <div class="command-output" id="output"></div>
+                <div id="output"></div>
                 <div class="command-input">
-                    <input type="text" id="command-input" placeholder="Enter command...">
+                    <input type="text" id="command-input" placeholder="Enter command..." autocomplete="off">
                     <button onclick="sendCommand()" class="send-button">
                         <span class="material-icons">send</span>
-                        Send
                     </button>
                 </div>
                 <div class="command-buttons">
@@ -235,10 +234,10 @@ function selectSession(sessionId) {
             `;
             
             // Focus command input
-            document.getElementById('command-input').focus();
+            const commandInput = document.getElementById('command-input');
+            commandInput.focus();
             
             // Add command history support
-            const commandInput = document.getElementById('command-input');
             commandInput.addEventListener('keydown', handleCommandHistory);
             commandInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {

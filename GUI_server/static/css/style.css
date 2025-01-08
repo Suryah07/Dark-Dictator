@@ -55,435 +55,96 @@ body {
     display: grid;
     grid-template-columns: 350px 1fr;
     gap: 24px;
+    height: calc(100vh - 180px);
+    overflow: hidden;
 }
 
-.targets-panel, .command-panel {
+.targets-panel {
     background: var(--surface-dark);
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-h2 {
-    margin: 0 0 20px 0;
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.session-info {
-    background: var(--card-dark);
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-}
-
-.command-input {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.command-input input {
-    flex: 1;
-    padding: 12px 16px;
-    background: var(--card-dark);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: var(--text-primary);
-    font-size: 14px;
-    transition: border-color 0.2s;
-}
-
-.command-input input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    color: white;
-    font-weight: 500;
-    cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s;
-    text-transform: uppercase;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-}
-
-button:hover {
-    transform: translateY(-1px);
-}
-
-button:active {
-    transform: translateY(1px);
-}
-
-.command-buttons {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.help-button {
-    background: var(--success-color);
-}
-
-.help-button:hover {
-    background: #43A047;
-}
-
-.clear-button {
-    background: var(--danger-color);
-}
-
-.clear-button:hover {
-    background: #D32F2F;
-}
-
-.send-button {
-    background: var(--primary-color);
-}
-
-.send-button:hover {
-    background: var(--primary-dark);
-}
-
-.file-upload {
-    background: var(--card-dark);
-    padding: 16px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-}
-
-.file-upload input[type="file"] {
-    display: none;
-}
-
-.file-upload label {
-    display: inline-block;
-    padding: 8px 16px;
-    background: var(--surface-dark);
-    border-radius: 6px;
-    cursor: pointer;
-    margin-right: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-secondary);
-}
-
-.file-upload label:hover {
-    border-color: var(--primary-color);
-    color: var(--text-primary);
-}
-
-.command-output {
-    background: var(--card-dark);
-    padding: 16px;
-    border-radius: 6px;
-    min-height: 300px;
-    max-height: 600px;
+    height: 100%;
     overflow-y: auto;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 14px;
-    line-height: 1.6;
 }
 
-.target-item {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    margin-bottom: 8px;
-    background: var(--card-dark);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    box-sizing: border-box;
-}
-
-.target-item:hover {
-    border-color: var(--primary-color);
-    background: var(--surface-dark);
-}
-
-.target-item.selected {
-    background: var(--primary-color);
-}
-
-.agent-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--surface-dark);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-right: 0;
-}
-
-.target-item.selected .agent-icon {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.agent-icon .material-icons {
-    font-size: 18px;
-    color: var(--text-secondary);
-}
-
-.target-item.selected .agent-icon .material-icons {
-    color: white;
-}
-
-.agent-info {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 16px;
-    min-width: 0;
-}
-
-.agent-details {
-    flex: 1;
-    min-width: 0;
-}
-
-.agent-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.agent-name {
-    font-weight: 500;
-    font-size: 14px;
-    color: var(--text-primary);
-}
-
-.target-item.selected .agent-name {
-    color: white;
-}
-
-.agent-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    color: var(--text-secondary);
-    font-size: 13px;
-}
-
-.agent-meta span {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-}
-
-.target-item.selected .agent-meta {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.agent-actions {
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    margin-left: auto;
-}
-
-.target-item:hover .agent-actions {
-    opacity: 1;
-}
-
-.agent-action {
-    padding: 4px;
-    background: transparent;
-    color: var(--text-secondary);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.agent-action .material-icons {
-    font-size: 18px;
-}
-
-.target-item.selected .agent-action {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.agent-action:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    transform: none;
-}
-
-.status-badge {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-right: 4px;
-}
-
-.status-badge.online {
-    background: var(--success-color);
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-}
-
-.target-item.selected .status-badge.online {
-    background: white;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
-}
-
-.session-time {
-    font-size: 11px;
-    color: var(--text-secondary);
-    margin-top: 4px;
-}
-
-.session-header {
-    font-weight: 500;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-}
-
-.session-details {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-.help-text {
-    background: var(--card-dark);
-    padding: 16px;
-    border-radius: 6px;
-    border-left: 3px solid var(--success-color);
-    margin: 12px 0;
-}
-
-.command-category {
-    color: var(--primary-color);
-    font-weight: 500;
-    margin-top: 16px;
-    text-transform: uppercase;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-}
-
-.command-item {
-    margin: 8px 0 8px 16px;
-    color: var(--text-secondary);
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--surface-dark);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-dark);
-}
-
-/* Loading animation */
-.loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: var(--primary-color);
-    animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Add theme toggle styles */
-.theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.theme-switch {
-    position: relative;
-    width: 60px;
-    height: 30px;
-}
-
-.theme-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--card-dark);
-    transition: .4s;
-    border-radius: 34px;
-    border: 2px solid var(--primary-color);
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 22px;
-    width: 22px;
-    left: 4px;
-    bottom: 2px;
-    background-color: var(--primary-color);
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: var(--primary-color);
-}
-
-input:checked + .slider:before {
-    transform: translateX(26px);
-    background-color: white;
-}
-
-.theme-icon {
-    color: var(--text-primary);
-}
-
-/* Add these styles for command prompt */
 .command-panel {
-    margin-top: 0;
-    height: calc(50vh - 100px);
     display: none;
+    background: var(--surface-dark);
+    border-radius: 8px;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .command-panel.active {
     display: flex;
-    flex-direction: column;
+}
+
+.session-header {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--card-dark);
+    flex-shrink: 0;
+}
+
+#output {
+    flex-grow: 1;
+    height: 0;
+    overflow-y: auto;
+    background: var(--card-dark);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-family: 'Roboto Mono', monospace;
+    line-height: 1.5;
+}
+
+.command-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.command-input input {
+    flex-grow: 1;
+    background: var(--card-dark);
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.command-buttons {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.command-entry {
+    margin: 8px 0;
+    color: var(--primary-color);
+}
+
+.command-entry .prompt {
+    color: var(--success-color);
+    margin-right: 8px;
+}
+
+.command-output {
+    margin: 8px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.error-output {
+    color: var(--danger-color);
+    background: rgba(244, 67, 54, 0.1);
+    border-radius: 4px;
+    padding: 12px;
+    margin: 8px 0;
 }
 
 .no-session-message {
@@ -491,15 +152,14 @@ input:checked + .slider:before {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 300px;
+    height: 100%;
     color: var(--text-secondary);
     text-align: center;
-    padding: 20px;
+    gap: 12px;
 }
 
 .no-session-message .material-icons {
     font-size: 48px;
-    margin-bottom: 16px;
     opacity: 0.5;
 }
 

