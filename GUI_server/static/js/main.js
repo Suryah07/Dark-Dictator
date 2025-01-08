@@ -337,16 +337,19 @@ function deselectSession() {
 function setLoading(isLoading) {
     const sendButton = document.querySelector('.send-button');
     if (isLoading) {
-        sendButton.innerHTML = '<div class="loading"></div>';
         sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="material-icons loading">sync</span>';
     } else {
-        sendButton.innerHTML = '<span class="material-icons">send</span> Send';
         sendButton.disabled = false;
+        sendButton.innerHTML = '<span class="material-icons">send</span>';
     }
 }
 
 function sendCommand() {
-    if (!currentSession) return;
+    if (selectedAgents.size === 0) {
+        appendToOutput(`<div class="error-output">No agents selected</div>`);
+        return;
+    }
     
     const commandInput = document.getElementById('command-input');
     const command = commandInput.value.trim();
@@ -356,38 +359,57 @@ function sendCommand() {
     commandInput.value = '';
     appendToOutput(`<div class="command-entry">
         <span class="prompt">$</span>
-        <span class="command">${escapeHtml(command)}</span>
+        <span class="command">${escapeHtml(command)} (to ${selectedAgents.size} agents)</span>
     </div>`);
     
     // Show loading state
     setLoading(true);
     
-    // Send command to server
-    fetch('/api/send_command', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            session_id: currentSession,
-            command: command
+    // Send command to all selected agents
+    const promises = Array.from(selectedAgents).map(agentId => {
+        console.log(`Sending command "${command}" to agent ${agentId}`);
+        return fetch('/api/send_command', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: parseInt(agentId),
+                command: command
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            appendToOutput(`<div class="error-output">${escapeHtml(data.error)}</div>`);
-        } else {
-            appendToOutput(`<div class="command-output">${formatOutput(data.output)}</div>`);
-        }
-    })
-    .catch(error => {
-        appendToOutput(`<div class="error-output">Error: ${escapeHtml(error.message)}</div>`);
-    })
-    .finally(() => {
-        setLoading(false);
-        scrollOutputToBottom();
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            return { agentId, data };
+        });
     });
+    
+    Promise.all(promises)
+        .then(results => {
+            results.forEach(({ agentId, data }) => {
+                console.log(`Response from agent ${agentId}:`, data);
+                appendToOutput(`<div class="command-output">
+                    <div class="output-header">Agent ${agentId}:</div>
+                    ${formatOutput(data.output)}
+                </div>`);
+            });
+        })
+        .catch(error => {
+            console.error('Command execution error:', error);
+            appendToOutput(`<div class="error-output">Error: ${escapeHtml(error.message)}</div>`);
+        })
+        .finally(() => {
+            setLoading(false);
+            scrollOutputToBottom();
+        });
 }
 
 function appendToOutput(html) {
@@ -401,27 +423,7 @@ function formatOutput(output) {
     if (typeof output !== 'string') {
         output = JSON.stringify(output, null, 2);
     }
-    
-    // Escape HTML
-    output = escapeHtml(output);
-    
-    // Highlight commands
-    output = output.replace(/^(\$|\>)\s+(.+)$/gm, (match, prompt, cmd) => {
-        return `<span class="prompt">${prompt}</span> <span class="command">${highlightCommand(cmd)}</span>`;
-    });
-    
-    // Highlight paths and URLs
-    output = output.replace(/(?:^|\s)(\/[\w\-./]+)/g, ' <span class="path">$1</span>');
-    output = output.replace(/(https?:\/\/[^\s]+)/g, '<span class="url">$1</span>');
-    
-    // Highlight IP addresses
-    output = output.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/g, '<span class="ip">$1</span>');
-    
-    // Highlight success/error messages
-    output = output.replace(/^(Success|OK|Done):.+$/gm, '<span class="success">$&</span>');
-    output = output.replace(/^(Error|Failed|Warning):.+$/gm, '<span class="error">$&</span>');
-    
-    return output.replace(/\n/g, '<br>');
+    return escapeHtml(output).replace(/\n/g, '<br>');
 }
 
 function escapeHtml(unsafe) {

@@ -270,21 +270,23 @@
                             <span class="material-icons">group</span>
                             <span class="selected-count">0 agents selected</span>
                         </div>
-                        <div class="command-actions">
-                            <button onclick="selectAllAgents()" class="select-all-button">
+                        <div class="command-buttons">
+                            <button onclick="selectAllAgents()" class="command-button help-button">
                                 <span class="material-icons">select_all</span>
                                 Select All
                             </button>
-                            <button onclick="clearSelection()" class="clear-selection-button">
+                            <button onclick="clearSelection()" class="command-button clear-button">
                                 <span class="material-icons">clear_all</span>
                                 Clear Selection
                             </button>
                         </div>
                     </div>
                     <div id="output"></div>
-                    <div class="command-input">
-                        <input type="text" id="command-input" placeholder="Enter command to send to selected agents..." autocomplete="off">
-                        <button onclick="sendMultiCommand()" class="send-button">
+                    <div class="command-input-wrapper">
+                        <div class="command-input">
+                            <input type="text" id="command-input" placeholder="Enter command to send to selected agents..." autocomplete="off">
+                        </div>
+                        <button onclick="sendCommand()" class="send-button" title="Send command">
                             <span class="material-icons">send</span>
                         </button>
                     </div>

@@ -620,15 +620,15 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--surface-dark);
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 24px;
+    gap: 20px;
 }
 
 .command-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--card-dark);
 }
@@ -734,4 +734,140 @@ body {
 /* Make command input relative for suggestions positioning */
 .command-input {
     position: relative;
+}
+
+#output {
+    flex-grow: 1;
+    background: var(--card-dark);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Roboto Mono', monospace;
+    line-height: 1.6;
+    overflow-y: auto;
+    color: #E0E0E0;
+}
+
+.command-input-wrapper {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    background: var(--card-dark);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.command-input {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    flex-grow: 1;
+}
+
+.command-input:before {
+    content: '$';
+    color: var(--primary-color);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 16px;
+    line-height: 40px;
+}
+
+#command-input {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 16px;
+    padding: 8px;
+    outline: none;
+}
+
+.send-button {
+    background: var(--primary-color);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.send-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.send-button:active {
+    transform: translateY(1px);
+}
+
+.command-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.command-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.help-button {
+    background: var(--card-dark);
+    color: var(--text-secondary);
+}
+
+.help-button:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.clear-button {
+    background: var(--card-dark);
+    color: var(--text-secondary);
+}
+
+.clear-button:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.command-entry {
+    margin: 8px 0;
+    padding: 8px;
+    border-radius: 4px;
+    background: rgba(33, 150, 243, 0.1);
+}
+
+.command-entry .prompt {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.command-output {
+    margin: 8px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.error-output {
+    margin: 8px 0;
+    padding: 12px;
+    background: rgba(244, 67, 54, 0.1);
+    border-radius: 4px;
+    color: #FF5252;
 } 
