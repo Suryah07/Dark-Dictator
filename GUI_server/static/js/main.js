@@ -437,4 +437,61 @@ function forceRemoveAgent(agentId) {
         })
     })
     .catch(error => console.error('Error forcing agent removal:', error));
+}
+
+function uploadFile(agentId) {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.onchange = function() {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('session_id', agentId);
+
+        fetch('/api/send_file', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                appendToTerminal(`Error uploading file: ${data.error}`, 'error');
+            } else {
+                appendToTerminal(data.message, 'success');
+            }
+        })
+        .catch(error => {
+            appendToTerminal(`Upload failed: ${error}`, 'error');
+        });
+    };
+    fileInput.click();
+}
+
+function downloadFile(agentId) {
+    const filename = prompt('Enter the file path to download:');
+    if (!filename) return;
+
+    fetch('/api/download_file', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId,
+            filename: filename
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            appendToTerminal(`Error downloading file: ${data.error}`, 'error');
+        } else {
+            appendToTerminal(data.message, 'success');
+        }
+    })
+    .catch(error => {
+        appendToTerminal(`Download failed: ${error}`, 'error');
+    });
 } 

