@@ -595,6 +595,27 @@ function forceRemoveAgent(agentId) {
     .catch(error => console.error('Error forcing agent removal:', error));
 }
 
+function showProgressOverlay(show = true) {
+    const overlay = document.getElementById('progress-overlay');
+    if (overlay) {
+        overlay.style.display = show ? 'flex' : 'none';
+    }
+}
+
+function updateProgress(percent, status = null) {
+    const fill = document.querySelector('.progress-fill');
+    const text = document.querySelector('.progress-text');
+    const statusDiv = document.querySelector('.progress-status');
+
+    if (fill && text) {
+        fill.style.width = `${percent}%`;
+        text.textContent = `${percent.toFixed(1)}%`;
+        if (status && statusDiv) {
+            statusDiv.textContent = status;
+        }
+    }
+}
+
 function uploadFile(agentId) {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -602,8 +623,10 @@ function uploadFile(agentId) {
         const file = fileInput.files[0];
         if (!file) return;
 
-        // Show upload status
+        // Show upload status and progress bar
         appendToTerminal(`Uploading file: ${file.name}...`, 'info', agentId);
+        showProgressOverlay(true);
+        updateProgress(0, `Uploading ${file.name}`);
 
         // Create FormData and append file
         const formData = new FormData();
@@ -611,17 +634,38 @@ function uploadFile(agentId) {
         formData.append('session_id', agentId);
 
         try {
-            // Send file to server
-            const response = await fetch('/api/send_file', {
-                method: 'POST',
-                body: formData
+            // Create XMLHttpRequest to track progress
+            const xhr = new XMLHttpRequest();
+            
+            // Setup progress handler
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percent = (e.loaded / e.total) * 100;
+                    updateProgress(percent, `Uploading ${file.name}`);
+                }
+            };
+            
+            // Setup completion handler
+            const uploadPromise = new Promise((resolve, reject) => {
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        resolve(JSON.parse(xhr.responseText));
+                    } else {
+                        reject(new Error(xhr.responseText));
+                    }
+                };
+                xhr.onerror = () => reject(new Error('Network error'));
             });
+
+            // Send request
+            xhr.open('POST', '/api/send_file');
+            xhr.send(formData);
+
+            // Wait for completion
+            const data = await uploadPromise;
             
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Upload failed');
-            }
+            // Hide progress bar
+            showProgressOverlay(false);
 
             if (data.success) {
                 appendToTerminal(data.message, 'success', agentId);
@@ -629,6 +673,7 @@ function uploadFile(agentId) {
                 throw new Error(data.error || 'Upload failed');
             }
         } catch (error) {
+            showProgressOverlay(false);
             appendToTerminal(`Upload failed: ${error.message}`, 'error', agentId);
         }
     };
@@ -639,8 +684,10 @@ function downloadFile(agentId) {
     const filename = prompt('Enter the file path to download:');
     if (!filename) return;
 
-    // Show download status
+    // Show download status and progress bar
     appendToTerminal(`Downloading file: ${filename}...`, 'info', agentId);
+    showProgressOverlay(true);
+    updateProgress(0, `Downloading ${filename}`);
 
     fetch('/api/download_file', {
         method: 'POST',
@@ -664,6 +711,13 @@ function downloadFile(agentId) {
         if (data.error) {
             throw new Error(data.error);
         }
+        
+        // Show 100% progress on success
+        updateProgress(100, `Downloaded ${filename}`);
+        setTimeout(() => {
+            showProgressOverlay(false);
+        }, 1000);
+        
         appendToTerminal(data.message || data.output, 'success', agentId);
         if (data.path) {
             appendToTerminal(`File saved to: ${data.path}`, 'info', agentId);
@@ -677,6 +731,7 @@ function downloadFile(agentId) {
         }
     })
     .catch(error => {
+        showProgressOverlay(false);
         appendToTerminal(`Download failed: ${error.message}`, 'error', agentId);
     });
 }

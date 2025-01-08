@@ -46,7 +46,9 @@
                     <div class="agent-scroll">
                         <div class="agent-list" id="agent-list"></div>
                     </div>
-                    <div class="agent-tabs" id="agent-tabs"></div>
+                    <div class="agent-tabs" id="agent-tabs">
+                        <!-- Agent tabs will be dynamically added here -->
+                    </div>
                 </div>
             </div>
 
@@ -63,6 +65,17 @@
                 <div class="storage-panel">
                     <h2>File Storage</h2>
                     <div class="storage-content"></div>
+                </div>
+            </div>
+
+            <!-- Progress Bar Template -->
+            <div class="progress-overlay" id="progress-overlay" style="display: none;">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">0%</div>
+                    <div class="progress-status">Transferring...</div>
                 </div>
             </div>
         </div>
