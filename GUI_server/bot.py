@@ -38,44 +38,36 @@ class Bot:
 
     def reliable_send(self, data):
         try:
-            if isinstance(data, str):
-                data = data.encode(ENCODING)
-            elif isinstance(data, dict):
-                data = json.dumps(data).encode(ENCODING)
+            if isinstance(data, (dict, list)):
+                data = json.dumps(data)
             else:
-                data = str(data).encode(ENCODING)
+                data = str(data)
             
-            self.target.send(data)
-            logging.debug(f"Data sent to Session {self.id}: {data}")
+            self.target.send(data.encode(ENCODING))
             return True
-        except BrokenPipeError:
-            logging.error(f"Broken pipe error for Session {self.id}")
-            return False
         except Exception as e:
             logging.error(f"Error sending data to Session {self.id}: {e}")
             return False
 
     def reliable_recv(self):
-        data = ''
-        while True:
+        try:
+            data = self.target.recv(1024).decode(ENCODING)
+            if not data:
+                return None
+            
+            # Try to parse as JSON
             try:
-                chunk = self.target.recv(1024).decode(ENCODING).rstrip()
-                if not chunk:
-                    return None
-                data += chunk
-                try:
-                    result = json.loads(data)
-                    logging.debug(f"Data received from Session {self.id}: {result}")
-                    return result
-                except json.JSONDecodeError:
-                    # If not valid JSON, might need more data
-                    continue
-            except socket.error as e:
-                logging.error(f"Socket error for Session {self.id}: {e}")
-                return None
-            except Exception as e:
-                logging.error(f"Unexpected error for Session {self.id}: {e}")
-                return None
+                return json.loads(data)
+            except json.JSONDecodeError:
+                # If not JSON, return as string
+                return data.strip()
+            
+        except socket.error as e:
+            logging.error(f"Socket error for Session {self.id}: {e}")
+            return None
+        except Exception as e:
+            logging.error(f"Unexpected error for Session {self.id}: {e}")
+            return None
 
     def upload_file(self, file_name):
         try:
@@ -192,4 +184,5 @@ class Bot:
             return f"Error terminating session: {e}" 
 
     def update_last_seen(self):
-        self.last_seen = datetime.now() 
+        self.last_seen = datetime.now()
+        logging.debug(f"Updated last seen for Session {self.id}") 
