@@ -641,3 +641,49 @@ h2 {
     font-size: 11px;
     color: var(--text-secondary);
 } 
+
+.agent-tab-header .agent-actions button {
+    background: var(--card-dark);
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.agent-tab-header .agent-actions button:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.agent-tab-header .agent-actions button:active {
+    transform: translateY(0);
+}
+
+.agent-tab-header .agent-actions button .material-icons {
+    font-size: 18px;
+}
+
+/* Add specific colors for different actions */
+.agent-tab-header .agent-actions button[title="Take Screenshot"]:hover {
+    background: var(--primary-color);
+}
+
+.agent-tab-header .agent-actions button[title="Upload File"]:hover {
+    background: var(--success-color);
+}
+
+.agent-tab-header .agent-actions button[title="Download File"]:hover {
+    background: var(--success-color);
+}
+
+.agent-tab-header .agent-actions button[title="Terminate"]:hover {
+    background: var(--danger-color);
+} 

