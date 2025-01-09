@@ -489,10 +489,8 @@ def create_directory_structure():
     except Exception as e:
         logging.error(f"Error creating directory structure: {str(e)}")
 
-@app.before_first_request
-def initialize_app():
-    """Initialize application requirements"""
-    create_directory_structure()
+# Initialize directories when app starts
+create_directory_structure()
 
 # Modified storage endpoint to handle simple structure
 @app.route('/api/storage')

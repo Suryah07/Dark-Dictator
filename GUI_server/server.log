@@ -4548,3 +4548,15 @@
 2025-01-09 22:37:53,805 - INFO - 127.0.0.1 - - [09/Jan/2025 22:37:53] "GET /api/dumps HTTP/1.1" 200 -
 2025-01-09 22:37:58,214 - INFO - 127.0.0.1 - - [09/Jan/2025 22:37:58] "GET /api/storage HTTP/1.1" 200 -
 2025-01-09 22:37:59,677 - INFO - 127.0.0.1 - - [09/Jan/2025 22:37:59] "GET /api/dumps HTTP/1.1" 200 -
+2025-01-09 22:38:38,272 - INFO - Received shutdown signal, cleaning up...
+2025-01-09 22:38:38,272 - INFO - Initiating server shutdown...
+2025-01-09 22:38:38,273 - ERROR - Error accepting connection: [WinError 10038] An operation was attempted on something that is not a socket
+2025-01-09 22:38:38,274 - INFO - Closed main socket
+2025-01-09 22:38:38,275 - INFO - Server shutdown complete
+2025-01-09 22:38:38,276 - INFO - Server stopped
+2025-01-09 22:38:41,621 - INFO - C2 Server started and listening for connections...
+2025-01-09 22:38:41,621 - INFO - Server started successfully
+2025-01-09 22:38:41,622 - INFO - Server started successfully
+2025-01-09 22:38:41,641 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-01-09 22:38:41,642 - INFO - [33mPress CTRL+C to quit[0m
