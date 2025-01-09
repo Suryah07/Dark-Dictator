@@ -166,7 +166,7 @@ class Bot:
                 while remaining > 0:
                     chunk = self.target.recv(min(4096, remaining))
                     if not chunk:
-                        break
+                    break
                     received_data += chunk
                     remaining -= len(chunk)
                 

