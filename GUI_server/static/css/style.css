@@ -528,11 +528,15 @@ h2 {
 }
 
 .file-actions button {
-    background: transparent;
+    background: var(--card-dark);
     border: none;
-    color: var(--text-secondary);
-    padding: 4px;
     border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -540,6 +544,19 @@ h2 {
 .file-actions button:hover {
     background: var(--primary-color);
     color: white;
+    transform: translateY(-1px);
+}
+
+.file-actions button[title="Preview"]:hover {
+    background: var(--primary-color);
+}
+
+.file-actions button[title="Download"]:hover {
+    background: var(--success-color);
+}
+
+.file-actions button[title="Delete"]:hover {
+    background: var(--danger-color);
 }
 
 .no-files {
@@ -685,5 +702,94 @@ h2 {
 }
 
 .agent-tab-header .agent-actions button[title="Terminate"]:hover {
+    background: var(--danger-color);
+} 
+
+/* Image Preview Modal */
+.preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.preview-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: var(--surface-dark);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.preview-content img {
+    max-width: 100%;
+    max-height: calc(90vh - 16px);
+    border-radius: 4px;
+}
+
+.close-preview {
+    position: absolute;
+    top: -16px;
+    right: -16px;
+    background: var(--danger-color);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-preview:hover {
+    transform: scale(1.1);
+    background: var(--danger-color);
+}
+
+.close-preview .material-icons {
+    font-size: 20px;
+}
+
+/* Update file actions for preview button */
+.file-actions button {
+    background: var(--card-dark);
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-actions button:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.file-actions button[title="Preview"]:hover {
+    background: var(--primary-color);
+}
+
+.file-actions button[title="Download"]:hover {
+    background: var(--success-color);
+}
+
+.file-actions button[title="Delete"]:hover {
     background: var(--danger-color);
 } 

