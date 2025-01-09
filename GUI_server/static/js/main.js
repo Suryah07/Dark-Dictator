@@ -1235,6 +1235,19 @@ function updateKeyloggerStatus() {
     }
 }
 
+function startLogUpdates() {
+    stopLogUpdates();  // Clear any existing interval
+    fetchLatestLogs(); // Immediate update
+    logUpdateInterval = setInterval(fetchLatestLogs, 5000);  // Update every 5 seconds
+}
+
+function stopLogUpdates() {
+    if (logUpdateInterval) {
+        clearInterval(logUpdateInterval);
+        logUpdateInterval = null;
+    }
+}
+
 // Initialize keylogger updates when switching to keylogger tab
 document.addEventListener('DOMContentLoaded', function() {
     const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
