@@ -1,230 +1,119 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dark Dictator</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <title>C2 Server GUI</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Roboto+Mono&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .header {
-            text-align: center;
-            padding: 10px 0;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #1a1a1a, #2d2d2d);
-            border-bottom: 2px solid #ff3e3e;
-            box-shadow: 0 2px 10px rgba(255, 62, 62, 0.2);
-        }
-
-        .header h1 {
-            margin: 0;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            color: #ff3e3e;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            text-shadow: 0 0 10px rgba(255, 62, 62, 0.5);
-        }
-
-        .header .subtitle {
-            font-size: 12px;
-            color: #888;
-            margin-top: 5px;
-            font-family: monospace;
-        }
-    </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Dark Dictator</h1>
-        <div class="subtitle">Command & Control Server</div>
-    </div>
-    
-    <!-- Tab Navigation -->
-    <div class="tab-navigation">
-        <button class="tab-button active" data-tab="agents">
-            <span class="material-icons">devices</span>
-            Connected Agents
-        </button>
-        <button class="tab-button" data-tab="command">
-            <span class="material-icons">terminal</span>
-            Command Center
-        </button>
-        <button class="tab-button" data-tab="keylogger">
-            <span class="material-icons">keyboard</span>
-            Keylogger
-        </button>
-        <button class="tab-button" data-tab="dumps">
-            <span class="material-icons">description</span>
-            Dumps
-        </button>
-        <button class="tab-button" data-tab="storage">
-            <span class="material-icons">folder</span>
-            Storage
-        </button>
-        <button class="tab-button" data-tab="build">
-            <span class="material-icons">build</span>
-            Build Agent
-        </button>
-    </div>
+    <div class="container">
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <button class="tab-button active" data-tab="agents">
+                <span class="material-icons">devices</span>
+                Connected Agents
+            </button>
+            <button class="tab-button" data-tab="command">
+                <span class="material-icons">terminal</span>
+                Command Center
+            </button>
+            <button class="tab-button" data-tab="keylogger">
+                <span class="material-icons">keyboard</span>
+                Keylogger
+            </button>
+            <button class="tab-button" data-tab="storage">
+                <span class="material-icons">folder</span>
+                Storage
+            </button>
+            <button class="tab-button" data-tab="build">
+                <span class="material-icons">build</span>
+                Build Agent
+            </button>
+        </nav>
 
-    <!-- Tab Content -->
-    <div class="tab-content">
-        <!-- Agents Tab -->
-        <div id="agents-tab" class="tab-pane active">
-            <div class="agents-container">
-                <div class="targets-panel">
-                    <h2>Connected Agents</h2>
-                    <div id="targets-list"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Command Tab -->
-        <div id="command-tab" class="tab-pane">
-            <div class="command-center">
-                <div class="agent-scroll">
-                    <div class="agent-list" id="agent-list"></div>
-                </div>
-                <div class="agent-tabs" id="agent-tabs">
-                    <!-- Agent tabs will be dynamically added here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Keylogger Tab -->
-        <div id="keylogger-tab" class="tab-pane">
-            <div class="keylogger-container">
-                <div class="keylogger-header">
-                    <h2>Keylogger Control Panel</h2>
-                    <div class="keylogger-actions">
-                        <button onclick="startKeylogger()" class="action-button start">
-                            <span class="material-icons">play_arrow</span>
-                            Start
-                        </button>
-                        <button onclick="stopKeylogger()" class="action-button stop">
-                            <span class="material-icons">stop</span>
-                            Stop
-                        </button>
-                        <button onclick="downloadLogs()" class="action-button download">
-                            <span class="material-icons">download</span>
-                            Download Logs
-                        </button>
-                        <button onclick="clearLogs()" class="action-button clear">
-                            <span class="material-icons">clear_all</span>
-                            Clear Logs
-                        </button>
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Agents Tab -->
+            <div id="agents-tab" class="tab-pane active">
+                <div class="agents-container">
+                    <div class="targets-panel">
+                        <h2>Connected Agents</h2>
+                        <div id="targets-list"></div>
                     </div>
                 </div>
-                <div class="keylogger-content">
-                    <div class="agent-selection">
-                        <select id="keylogger-agent-select">
-                            <option value="">Select an agent...</option>
-                        </select>
+            </div>
+
+            <!-- Command Tab -->
+            <div id="command-tab" class="tab-pane">
+                <div class="command-center">
+                    <div class="agent-scroll">
+                        <div class="agent-list" id="agent-list"></div>
                     </div>
-                    <div class="logs-container">
-                        <div class="logs-header">
-                            <span>Captured Keystrokes</span>
-                            <div class="logs-status">
-                                <span class="status-indicator"></span>
-                                <span class="status-text">Stopped</span>
+                    <div class="agent-tabs" id="agent-tabs">
+                        <!-- Agent tabs will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keylogger Tab -->
+            <div id="keylogger-tab" class="tab-pane">
+                <div class="keylogger-container">
+                    <div class="keylogger-header">
+                        <h2>Keylogger Control Panel</h2>
+                        <div class="keylogger-actions">
+                            <button onclick="startKeylogger()" class="action-button start">
+                                <span class="material-icons">play_arrow</span>
+                                Start
+                            </button>
+                            <button onclick="stopKeylogger()" class="action-button stop">
+                                <span class="material-icons">stop</span>
+                                Stop
+                            </button>
+                            <button onclick="downloadLogs()" class="action-button download">
+                                <span class="material-icons">download</span>
+                                Download Logs
+                            </button>
+                            <button onclick="clearLogs()" class="action-button clear">
+                                <span class="material-icons">clear_all</span>
+                                Clear Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div class="keylogger-content">
+                        <div class="agent-selection">
+                            <select id="keylogger-agent-select">
+                                <option value="">Select an agent...</option>
+                            </select>
+                        </div>
+                        <div class="logs-container">
+                            <div class="logs-header">
+                                <span>Captured Keystrokes</span>
+                                <div class="logs-status">
+                                    <span class="status-indicator"></span>
+                                    <span class="status-text">Stopped</span>
+                                </div>
                             </div>
-                        </div>
-                        <div id="keylogger-output" class="logs-output"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Dumps Tab -->
-        <div id="dumps-tab" class="tab-pane">
-            <div class="dumps-container">
-                <div class="dumps-header">
-                    <h2>Text Dumps</h2>
-                    <div class="dumps-actions">
-                        <button class="action-button refresh" onclick="refreshDumps()">
-                            <span class="material-icons">refresh</span>
-                            Refresh
-                        </button>
-                        <button class="action-button clear-all" onclick="clearAllDumps()">
-                            <span class="material-icons">delete_sweep</span>
-                            Clear All
-                        </button>
-                    </div>
-                </div>
-                <div class="dumps-content">
-                    <div class="dumps-categories">
-                        <div class="category active" data-category="keylogger">
-                            <span class="material-icons">keyboard</span>
-                            Keylogger Dumps
-                        </div>
-                        <div class="category" data-category="credentials">
-                            <span class="material-icons">password</span>
-                            Credentials
-                        </div>
-                        <div class="category" data-category="system">
-                            <span class="material-icons">computer</span>
-                            System Info
-                        </div>
-                        <div class="category" data-category="network">
-                            <span class="material-icons">wifi</span>
-                            Network Data
-                        </div>
-                        <div class="category" data-category="other">
-                            <span class="material-icons">more_horiz</span>
-                            Other
-                        </div>
-                    </div>
-                    <div class="dumps-list">
-                        <div class="dumps-search">
-                            <input type="text" placeholder="Search dumps..." id="dumps-search">
-                            <span class="material-icons">search</span>
-                        </div>
-                        <div id="dumps-items" class="dumps-items">
-                            <!-- Dumps will be dynamically added here -->
-                        </div>
-                    </div>
-                    <div class="dump-viewer">
-                        <div class="dump-viewer-header">
-                            <div class="dump-info">
-                                <span class="dump-title">No file selected</span>
-                                <span class="dump-date"></span>
-                            </div>
-                            <div class="dump-actions">
-                                <button class="action-button" title="Download" onclick="downloadSelectedDump()">
-                                    <span class="material-icons">download</span>
-                                </button>
-                                <button class="action-button" title="Copy" onclick="copyDumpContent()">
-                                    <span class="material-icons">content_copy</span>
-                                </button>
-                                <button class="action-button" title="Delete" onclick="deleteSelectedDump()">
-                                    <span class="material-icons">delete</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="dump-content" class="dump-content">
-                            <div class="no-file-selected">
-                                <span class="material-icons">description</span>
-                                <p>Select a dump file to view its contents</p>
-                            </div>
+                            <div id="keylogger-output" class="logs-output"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Storage Tab -->
-        <div id="storage-tab" class="tab-pane">
-            <div class="storage-panel">
-                <h2>File Storage</h2>
-                <div class="storage-content"></div>
+            <!-- Storage Tab -->
+            <div id="storage-tab" class="tab-pane">
+                <div class="storage-panel">
+                    <h2>File Storage</h2>
+                    <div class="storage-content"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Build Tab -->
-        <div id="build-tab" class="tab-pane">
-            <div class="build-panel">
-                <h2>Build Agent</h2>
-                <!-- Build content here -->
+            <!-- Build Tab -->
+            <div id="build-tab" class="tab-pane">
+                <div class="build-panel">
+                    <h2>Build Agent</h2>
+                    <!-- Build content here -->
+                </div>
             </div>
         </div>
     </div>
