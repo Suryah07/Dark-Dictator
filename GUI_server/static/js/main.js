@@ -379,7 +379,7 @@ function renderFileList(files) {
             </button>` : '';
 
         return `
-        <div class="file-item" data-path="${file.path}">
+        <div class="file-item" data-path="${file.path}" ${isImage ? 'onclick="previewFile(\'' + file.path + '\')"' : ''}>
             <div class="file-info">
                 <span class="file-name">
                     <span class="material-icons">${isImage ? 'image' : 'description'}</span>
@@ -390,10 +390,10 @@ function renderFileList(files) {
             </div>
             <div class="file-actions">
                 ${previewButton}
-                <button onclick="downloadStorageFile('${file.path}')" title="Download">
+                <button onclick="event.stopPropagation(); downloadStorageFile('${file.path}')" title="Download">
                     <span class="material-icons">download</span>
                 </button>
-                <button onclick="deleteFile('${file.path}')" title="Delete">
+                <button onclick="event.stopPropagation(); deleteFile('${file.path}')" title="Delete">
                     <span class="material-icons">delete</span>
                 </button>
             </div>
@@ -1008,10 +1008,13 @@ function previewFile(path) {
     modal.className = 'preview-modal';
     modal.innerHTML = `
         <div class="preview-content">
-            <img src="/api/preview_file?path=${encodeURIComponent(path)}" alt="Preview">
-            <button class="close-preview" onclick="this.parentElement.parentElement.remove()">
-                <span class="material-icons">close</span>
-            </button>
+            <img src="/api/preview_file?path=${encodeURIComponent(path)}" alt="Preview" onload="this.style.opacity='1'">
+            <div class="preview-info">
+                <span class="filename">${path.split('/').pop()}</span>
+                <button class="close-preview" onclick="this.closest('.preview-modal').remove()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
@@ -1020,6 +1023,14 @@ function previewFile(path) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function closeOnEscape(e) {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', closeOnEscape);
         }
     });
 } 
