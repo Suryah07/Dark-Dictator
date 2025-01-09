@@ -1345,147 +1345,116 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Dumps Tab Functions
 function refreshDumps() {
-    fetch('/api/dumps', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        const dumpsContainer = document.getElementById('dumps-items');
-        if (!dumpsContainer) return;
+    fetch('/api/dumps')
+        .then(response => response.json())
+        .then(data => {
+            const dumpsContainer = document.getElementById('dumps-items');
+            dumpsContainer.innerHTML = '';
 
-        // Filter dumps by current category
-        const filteredDumps = data.filter(dump => dump.category === currentCategory);
-        
-        if (filteredDumps.length === 0) {
-            dumpsContainer.innerHTML = `
-                <div class="no-dumps">
-                    <p>No dumps available in this category</p>
-                </div>
-            `;
-            return;
-        }
+            if (data.length === 0) {
+                dumpsContainer.innerHTML = '<div class="no-dumps">No dumps available</div>';
+                return;
+            }
 
-        dumpsContainer.innerHTML = filteredDumps.map(dump => `
-            <div class="dump-item ${selectedDump?.id === dump.id ? 'active' : ''}" 
-                 onclick="selectDump('${dump.id}')">
-                <div class="dump-item-header">
-                    <span class="dump-item-name">${dump.name}</span>
-                    <span class="dump-item-date">${formatDate(dump.timestamp)}</span>
-                </div>
-                <span class="dump-item-size">${formatFileSize(dump.size)}</span>
-            </div>
-        `).join('');
-    })
-    .catch(error => {
-        console.error('Error fetching dumps:', error);
-        const dumpsContainer = document.getElementById('dumps-items');
-        if (dumpsContainer) {
-            dumpsContainer.innerHTML = `
-                <div class="no-dumps">
-                    <p>Error loading dumps</p>
-                </div>
-            `;
-        }
-    });
+            // Sort dumps by date, newest first
+            data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            data.forEach(dump => {
+                const dumpItem = document.createElement('div');
+                dumpItem.className = 'dump-item';
+                dumpItem.onclick = () => selectDump(dump.id);
+
+                const header = document.createElement('div');
+                header.className = 'dump-item-header';
+
+                const name = document.createElement('div');
+                name.className = 'dump-item-name';
+                name.textContent = dump.filename;
+
+                const date = document.createElement('div');
+                date.className = 'dump-item-date';
+                date.textContent = formatDate(dump.timestamp);
+
+                header.appendChild(name);
+                header.appendChild(date);
+                dumpItem.appendChild(header);
+
+                const size = document.createElement('div');
+                size.className = 'dump-item-size';
+                size.textContent = formatFileSize(dump.size);
+                dumpItem.appendChild(size);
+
+                dumpsContainer.appendChild(dumpItem);
+            });
+        })
+        .catch(error => console.error('Error fetching dumps:', error));
 }
 
 function selectDump(dumpId) {
-    fetch(`/api/dumps/${dumpId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        selectedDump = data;
-        
-        // Update UI
-        document.querySelectorAll('.dump-item').forEach(item => {
-            item.classList.toggle('active', item.getAttribute('onclick').includes(dumpId));
-        });
-
-        const dumpContent = document.getElementById('dump-content');
-        const dumpTitle = document.querySelector('.dump-title');
-        const dumpDate = document.querySelector('.dump-date');
-
-        if (dumpContent && dumpTitle && dumpDate) {
-            dumpTitle.textContent = data.name;
-            dumpDate.textContent = formatDate(data.timestamp);
-            dumpContent.innerHTML = `<pre>${data.content}</pre>`;
-        }
-    })
-    .catch(error => {
-        console.error('Error loading dump:', error);
-        const dumpContent = document.getElementById('dump-content');
-        if (dumpContent) {
-            dumpContent.innerHTML = `
-                <div class="error-message">
-                    <p>Error loading dump content</p>
-                </div>
-            `;
-        }
-    });
-}
-
-function switchCategory(category) {
-    currentCategory = category;
-    selectedDump = null;
-    
-    // Update UI
-    document.querySelectorAll('.category').forEach(item => {
-        item.classList.toggle('active', item.dataset.category === category);
+    // Remove active class from all items
+    document.querySelectorAll('.dump-item').forEach(item => {
+        item.classList.remove('active');
     });
 
-    // Reset dump viewer
-    const dumpContent = document.getElementById('dump-content');
-    const dumpTitle = document.querySelector('.dump-title');
-    const dumpDate = document.querySelector('.dump-date');
-
-    if (dumpContent && dumpTitle && dumpDate) {
-        dumpTitle.textContent = 'No file selected';
-        dumpDate.textContent = '';
-        dumpContent.innerHTML = `
-            <div class="no-file-selected">
-                <span class="material-icons">description</span>
-                <p>Select a dump file to view its contents</p>
-            </div>
-        `;
+    // Add active class to selected item
+    const selectedItem = document.querySelector(`.dump-item[data-id="${dumpId}"]`);
+    if (selectedItem) {
+        selectedItem.classList.add('active');
     }
 
-    // Refresh dumps list with new category
-    refreshDumps();
+    // Fetch and display dump content
+    fetch(`/api/dumps/${dumpId}`)
+        .then(response => response.json())
+        .then(data => {
+            const viewer = document.getElementById('dump-content');
+            const title = document.querySelector('.dump-title');
+            const date = document.querySelector('.dump-date');
+
+            title.textContent = data.filename;
+            date.textContent = formatDate(data.timestamp);
+
+            // Format and display content based on file type
+            if (data.content) {
+                try {
+                    // Try to parse as JSON for better formatting
+                    const jsonContent = JSON.parse(data.content);
+                    viewer.innerHTML = `<pre>${JSON.stringify(jsonContent, null, 2)}</pre>`;
+                } catch {
+                    // If not JSON, display as plain text
+                    viewer.innerHTML = `<pre>${data.content}</pre>`;
+                }
+            } else {
+                viewer.innerHTML = '<div class="no-content">No content available</div>';
+            }
+        })
+        .catch(error => console.error('Error fetching dump content:', error));
 }
 
 function downloadSelectedDump() {
-    if (!selectedDump) {
-        alert('No dump file selected');
-        return;
-    }
+    const dumpId = document.querySelector('.dump-item.active')?.dataset.id;
+    if (!dumpId) return;
 
-    const link = document.createElement('a');
-    const blob = new Blob([selectedDump.content], { type: 'text/plain' });
-    link.href = URL.createObjectURL(blob);
-    link.download = selectedDump.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+    fetch(`/api/dumps/${dumpId}/download`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = document.querySelector('.dump-title').textContent;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        })
+        .catch(error => console.error('Error downloading dump:', error));
 }
 
 function copyDumpContent() {
-    if (!selectedDump) {
-        alert('No dump file selected');
-        return;
-    }
-
-    navigator.clipboard.writeText(selectedDump.content)
+    const content = document.getElementById('dump-content').innerText;
+    navigator.clipboard.writeText(content)
         .then(() => {
-            // Show temporary success message
-            const button = document.querySelector('[onclick="copyDumpContent()"]');
+            // Show a temporary success message
+            const button = document.querySelector('.dump-actions button[title="Copy"]');
             const icon = button.querySelector('.material-icons');
             const originalText = icon.textContent;
             icon.textContent = 'check';
@@ -1493,113 +1462,58 @@ function copyDumpContent() {
                 icon.textContent = originalText;
             }, 2000);
         })
-        .catch(err => {
-            console.error('Failed to copy text:', err);
-            alert('Failed to copy content to clipboard');
-        });
+        .catch(error => console.error('Error copying content:', error));
 }
 
 function deleteSelectedDump() {
-    if (!selectedDump) {
-        alert('No dump file selected');
-        return;
-    }
+    const dumpId = document.querySelector('.dump-item.active')?.dataset.id;
+    if (!dumpId) return;
 
-    if (!confirm('Are you sure you want to delete this dump file?')) {
-        return;
-    }
+    if (!confirm('Are you sure you want to delete this dump?')) return;
 
-    fetch(`/api/dumps/${selectedDump.id}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            selectedDump = null;
-            refreshDumps();
-            // Reset dump viewer
-            const dumpContent = document.getElementById('dump-content');
-            const dumpTitle = document.querySelector('.dump-title');
-            const dumpDate = document.querySelector('.dump-date');
-
-            if (dumpContent && dumpTitle && dumpDate) {
-                dumpTitle.textContent = 'No file selected';
-                dumpDate.textContent = '';
-                dumpContent.innerHTML = `
+    fetch(`/api/dumps/${dumpId}`, { method: 'DELETE' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                refreshDumps();
+                // Clear viewer
+                document.querySelector('.dump-title').textContent = 'No file selected';
+                document.querySelector('.dump-date').textContent = '';
+                document.getElementById('dump-content').innerHTML = `
                     <div class="no-file-selected">
                         <span class="material-icons">description</span>
                         <p>Select a dump file to view its contents</p>
                     </div>
                 `;
             }
-        } else {
-            throw new Error(data.message || 'Failed to delete dump');
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting dump:', error);
-        alert('Failed to delete dump file');
-    });
+        })
+        .catch(error => console.error('Error deleting dump:', error));
 }
 
 function clearAllDumps() {
-    if (!confirm('Are you sure you want to clear all dumps in this category?')) {
-        return;
-    }
+    if (!confirm('Are you sure you want to delete all dumps? This action cannot be undone.')) return;
 
-    fetch(`/api/dumps/clear/${currentCategory}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            selectedDump = null;
-            refreshDumps();
-            // Reset dump viewer
-            const dumpContent = document.getElementById('dump-content');
-            const dumpTitle = document.querySelector('.dump-title');
-            const dumpDate = document.querySelector('.dump-date');
-
-            if (dumpContent && dumpTitle && dumpDate) {
-                dumpTitle.textContent = 'No file selected';
-                dumpDate.textContent = '';
-                dumpContent.innerHTML = `
+    fetch('/api/dumps', { method: 'DELETE' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                refreshDumps();
+                // Clear viewer
+                document.querySelector('.dump-title').textContent = 'No file selected';
+                document.querySelector('.dump-date').textContent = '';
+                document.getElementById('dump-content').innerHTML = `
                     <div class="no-file-selected">
                         <span class="material-icons">description</span>
                         <p>Select a dump file to view its contents</p>
                     </div>
                 `;
             }
-        } else {
-            throw new Error(data.message || 'Failed to clear dumps');
-        }
-    })
-    .catch(error => {
-        console.error('Error clearing dumps:', error);
-        alert('Failed to clear dumps');
-    });
+        })
+        .catch(error => console.error('Error clearing dumps:', error));
 }
 
-// Initialize dumps tab when switching to it
-document.querySelector('[data-tab="dumps"]').addEventListener('click', () => {
-    refreshDumps();
-});
-
-// Add category switching functionality
-document.querySelectorAll('.category').forEach(category => {
-    category.addEventListener('click', () => {
-        switchCategory(category.dataset.category);
-    });
-});
-
-// Add search functionality
-document.getElementById('dumps-search')?.addEventListener('input', (e) => {
+// Initialize dumps search functionality
+document.getElementById('dumps-search').addEventListener('input', function(e) {
     const searchTerm = e.target.value.toLowerCase();
     document.querySelectorAll('.dump-item').forEach(item => {
         const name = item.querySelector('.dump-item-name').textContent.toLowerCase();

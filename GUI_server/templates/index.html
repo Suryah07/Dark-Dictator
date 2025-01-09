@@ -139,7 +139,10 @@
         <div id="dumps-tab" class="tab-pane">
             <div class="dumps-container">
                 <div class="dumps-header">
-                    <h2>Text Dumps</h2>
+                    <h2>
+                        <span class="material-icons">description</span>
+                        Dumps
+                    </h2>
                     <div class="dumps-actions">
                         <button class="action-button refresh" onclick="refreshDumps()">
                             <span class="material-icons">refresh</span>
@@ -152,28 +155,6 @@
                     </div>
                 </div>
                 <div class="dumps-content">
-                    <div class="dumps-categories">
-                        <div class="category active" data-category="keylogger">
-                            <span class="material-icons">keyboard</span>
-                            Keylogger Dumps
-                        </div>
-                        <div class="category" data-category="credentials">
-                            <span class="material-icons">password</span>
-                            Credentials
-                        </div>
-                        <div class="category" data-category="system">
-                            <span class="material-icons">computer</span>
-                            System Info
-                        </div>
-                        <div class="category" data-category="network">
-                            <span class="material-icons">wifi</span>
-                            Network Data
-                        </div>
-                        <div class="category" data-category="other">
-                            <span class="material-icons">more_horiz</span>
-                            Other
-                        </div>
-                    </div>
                     <div class="dumps-list">
                         <div class="dumps-search">
                             <input type="text" placeholder="Search dumps..." id="dumps-search">
