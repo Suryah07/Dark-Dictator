@@ -330,6 +330,8 @@ def shutdown_server():
     
     logging.info("Server shutdown complete")
 
+
+#################AGENT BUILDING##########################
 # Add these routes
 @app.route('/api/build_agent', methods=['POST'])
 def build_agent():
@@ -460,6 +462,8 @@ def get_build_status(build_id):
         'progress': 0,
         'status': 'Build not found'
     })
+
+######################################################
 
 @app.route('/api/storage')
 def get_storage():
