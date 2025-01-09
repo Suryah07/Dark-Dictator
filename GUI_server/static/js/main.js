@@ -1061,17 +1061,21 @@ function updateAgentSelect() {
     fetch('/api/list_agents')
         .then(response => response.json())
         .then(data => {
+            // Convert agents object to array if needed
+            const agentList = Array.isArray(data) ? data : Object.values(data);
+            
             // Sort agents by last seen
-            const agentList = Object.values(data).sort((a, b) => 
-                new Date(b.last_seen) - new Date(a.last_seen)
-            );
+            agentList.sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
 
             // Add online agents
             agentList.forEach(agent => {
                 if (isAgentActive(agent.last_seen)) {
                     const option = document.createElement('option');
                     option.value = agent.id;
-                    option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'} | ${agent.ip})`;
+                    const agentName = agent.alias || `Agent_${agent.id}`;
+                    const osInfo = agent.os_type || 'Unknown';
+                    const ipInfo = agent.ip || 'Unknown IP';
+                    option.text = `${agentName} (${osInfo} | ${ipInfo})`;
                     select.add(option);
                 }
             });
@@ -1079,6 +1083,14 @@ function updateAgentSelect() {
             // Restore previous selection if agent still exists
             if (currentSelection && select.querySelector(`option[value="${currentSelection}"]`)) {
                 select.value = currentSelection;
+            }
+
+            // Update status if no agents are available
+            if (select.options.length <= 1) {
+                const option = document.createElement('option');
+                option.text = 'No agents available';
+                option.disabled = true;
+                select.add(option);
             }
         })
         .catch(error => {
@@ -1092,20 +1104,33 @@ function updateAgentSelect() {
 }
 
 // Start periodic updates for keylogger agent list
-let agentSelectInterval = setInterval(updateAgentSelect, 5000);
+let agentSelectInterval = null;
+
+function startAgentSelectUpdates() {
+    stopAgentSelectUpdates();
+    updateAgentSelect(); // Initial update
+    agentSelectInterval = setInterval(updateAgentSelect, 5000);
+}
+
+function stopAgentSelectUpdates() {
+    if (agentSelectInterval) {
+        clearInterval(agentSelectInterval);
+        agentSelectInterval = null;
+    }
+}
 
 // Update agent select when switching to keylogger tab
 document.addEventListener('DOMContentLoaded', function() {
     const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
     if (keyloggerTab) {
         keyloggerTab.addEventListener('click', () => {
-            updateAgentSelect();
-            // Restart interval when switching to keylogger tab
-            if (agentSelectInterval) {
-                clearInterval(agentSelectInterval);
-            }
-            agentSelectInterval = setInterval(updateAgentSelect, 5000);
+            startAgentSelectUpdates();
         });
+    }
+
+    // Start updates if keylogger tab is active initially
+    if (document.getElementById('keylogger-tab').classList.contains('active')) {
+        startAgentSelectUpdates();
     }
 });
 
