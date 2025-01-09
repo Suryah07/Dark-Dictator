@@ -226,13 +226,20 @@ class Bot:
                     
                 if received == file_size:
                     logging.info(f"Screenshot saved - Session {self.id} | File: {filepath}")
-                    return True, "Screenshot saved successfully", filepath
+                    # Verify file exists and has content
+                    if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+                        return True, "Screenshot saved successfully", filepath
+                    else:
+                        return False, "Screenshot file is empty or missing", None
                 else:
-                    os.remove(filepath)  # Clean up incomplete file
+                    if os.path.exists(filepath):
+                        os.remove(filepath)  # Clean up incomplete file
                     return False, "Screenshot transfer incomplete", None
                 
             except Exception as e:
                 logging.error(f"Error receiving screenshot - Session {self.id} | Error: {e}")
+                if 'filepath' in locals() and os.path.exists(filepath):
+                    os.remove(filepath)  # Clean up on error
                 return False, f"Error receiving screenshot: {str(e)}", None
             
         except Exception as e:

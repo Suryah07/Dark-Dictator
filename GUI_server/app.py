@@ -649,13 +649,37 @@ def download_file_from_agent():
 
 @app.route('/api/preview_file')
 def preview_file():
-    path = request.args.get('path')
-    if not path or not is_safe_path(path):
-        return jsonify({'error': 'Invalid file path'}), 400
-        
+    """Handle file preview requests"""
     try:
-        return send_file(path)
+        path = request.args.get('path')
+        if not path or not is_safe_path(path):
+            return jsonify({'error': 'Invalid file path'}), 400
+            
+        if not os.path.exists(path):
+            return jsonify({'error': 'File not found'}), 404
+            
+        # Get file extension
+        _, ext = os.path.splitext(path)
+        if ext.lower() not in ['.png', '.jpg', '.jpeg', '.gif']:
+            return jsonify({'error': 'Unsupported file type'}), 400
+            
+        # Set correct mime type
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif'
+        }
+        
+        return send_file(
+            path,
+            mimetype=mime_types.get(ext.lower(), 'application/octet-stream'),
+            as_attachment=False,
+            download_name=os.path.basename(path)
+        )
+        
     except Exception as e:
+        logging.error(f"Error in preview_file: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
