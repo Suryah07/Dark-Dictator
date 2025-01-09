@@ -1057,17 +1057,21 @@ function updateAgentSelect() {
         select.remove(1);
     }
 
-    // Fetch latest agents data
-    fetch('/api/agents')
+    // Use the same endpoint as command center
+    fetch('/api/list_agents')
         .then(response => response.json())
         .then(data => {
-            agents = data;  // Update agents data
+            // Sort agents by last seen
+            const agentList = Object.values(data).sort((a, b) => 
+                new Date(b.last_seen) - new Date(a.last_seen)
+            );
+
             // Add online agents
-            Object.values(agents).forEach(agent => {
+            agentList.forEach(agent => {
                 if (isAgentActive(agent.last_seen)) {
                     const option = document.createElement('option');
                     option.value = agent.id;
-                    option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'})`;
+                    option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'} | ${agent.ip})`;
                     select.add(option);
                 }
             });
@@ -1077,17 +1081,31 @@ function updateAgentSelect() {
                 select.value = currentSelection;
             }
         })
-        .catch(error => console.error('Error updating agent select:', error));
+        .catch(error => {
+            console.error('Error updating agent select:', error);
+            // Add error message to select
+            const option = document.createElement('option');
+            option.text = 'Error loading agents';
+            option.disabled = true;
+            select.add(option);
+        });
 }
 
 // Start periodic updates for keylogger agent list
-setInterval(updateAgentSelect, 5000);
+let agentSelectInterval = setInterval(updateAgentSelect, 5000);
 
 // Update agent select when switching to keylogger tab
 document.addEventListener('DOMContentLoaded', function() {
     const keyloggerTab = document.querySelector('[data-tab="keylogger"]');
     if (keyloggerTab) {
-        keyloggerTab.addEventListener('click', updateAgentSelect);
+        keyloggerTab.addEventListener('click', () => {
+            updateAgentSelect();
+            // Restart interval when switching to keylogger tab
+            if (agentSelectInterval) {
+                clearInterval(agentSelectInterval);
+            }
+            agentSelectInterval = setInterval(updateAgentSelect, 5000);
+        });
     }
 });
 
