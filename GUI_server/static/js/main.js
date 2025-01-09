@@ -1364,9 +1364,9 @@ function refreshDumps() {
                 fileItem.onclick = () => viewDumpContent(file.id);
                 fileItem.innerHTML = `
                     <div class="file-info">
-                        <span class="file-name">${file.filename}</span>
-                        <span class="file-size">${formatFileSize(file.size)}</span>
-                        <span class="file-date">${formatDate(file.timestamp)}</span>
+                        <div class="file-name-col">${file.filename}</div>
+                        <div class="file-size-col">${formatFileSize(file.size)}</div>
+                        <div class="file-date-col">${formatDate(file.timestamp)}</div>
                     </div>
                     <div class="file-actions">
                         <button onclick="event.stopPropagation(); downloadFile('${file.id}')" title="Download">
@@ -1392,21 +1392,37 @@ function viewDumpContent(fileId) {
     title.textContent = 'Loading...';
     
     fetch(`/api/dumps/${fileId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
             title.textContent = data.filename;
             
+            // Handle different content types
             let content = data.content;
             if (typeof content === 'object') {
-                // If content is an object (parsed JSON), format it nicely
                 content = JSON.stringify(content, null, 2);
             }
             
-            viewer.innerHTML = `<pre class="content-viewer">${content}</pre>`;
+            // Create a pre element with proper styling
+            const pre = document.createElement('pre');
+            pre.className = 'content-viewer';
+            pre.textContent = content;
+            
+            // Clear viewer and add the pre element
+            viewer.innerHTML = '';
+            viewer.appendChild(pre);
         })
         .catch(error => {
             console.error('Error loading dump content:', error);
-            viewer.innerHTML = '<div class="error-message">Error loading content</div>';
+            viewer.innerHTML = `<div class="error-message">Error loading content: ${error.message}</div>`;
             title.textContent = 'Error';
         });
 }

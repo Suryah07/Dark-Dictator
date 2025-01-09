@@ -486,22 +486,65 @@ h2 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px;
-    border-radius: 4px;
-    margin-bottom: 4px;
-    background: var(--surface-dark);
-    transition: background-color 0.2s ease;
+    padding: 10px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .file-item:hover {
-    background: var(--card-dark);
+    background-color: #2a2a2a;
 }
 
 .file-info {
     display: flex;
-    align-items: center;
-    gap: 16px;
     flex: 1;
+    align-items: center;
+    min-width: 0;
+}
+
+.file-name-col {
+    flex: 3;
+    min-width: 200px;
+    padding-right: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size-col {
+    flex: 1;
+    min-width: 100px;
+    padding-right: 20px;
+    text-align: right;
+}
+
+.file-date-col {
+    flex: 2;
+    min-width: 150px;
+    text-align: right;
+    padding-right: 20px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: 20px;
+}
+
+.file-actions button {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.file-actions button:hover {
+    color: #fff;
+    background-color: #363636;
 }
 
 .file-name {
@@ -1166,4 +1209,52 @@ h2 {
 .dump-content::-webkit-scrollbar-track {
     background: var(--card-dark);
     border-radius: 3px;
+} 
+
+.content-viewer {
+    margin: 0;
+    padding: 15px;
+    background: var(--card-dark);
+    border-radius: 4px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.content-viewer::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.content-viewer::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+.content-viewer::-webkit-scrollbar-track {
+    background: var(--card-dark);
+    border-radius: 3px;
+}
+
+#dump-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 15px;
+}
+
+.dump-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--surface-dark);
+    border-radius: 8px;
 } 

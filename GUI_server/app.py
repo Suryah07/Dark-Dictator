@@ -782,16 +782,30 @@ def get_dump_content(dump_id):
         _, ext = os.path.splitext(dump_id)
         ext = ext.lower()
         
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-            
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            # If UTF-8 fails, try reading as binary
+            with open(filepath, 'rb') as f:
+                content = f.read().decode('utf-8', errors='replace')
+                
         # Try to parse JSON if it's a JSON file
         if ext == '.json':
             try:
-                content = json.loads(content)
+                parsed_content = json.loads(content)
+                # If it's a WiFi dump, format it nicely
+                if isinstance(parsed_content, dict) and 'type' in parsed_content and parsed_content['type'] == 'wifi':
+                    wifi_data = parsed_content.get('data', [])
+                    formatted_data = []
+                    for profile in wifi_data:
+                        formatted_data.append(f"SSID: {profile.get('ssid', 'N/A')}\nPassword: {profile.get('password', 'N/A')}\n")
+                    content = '\n'.join(formatted_data)
+                else:
+                    content = json.dumps(parsed_content, indent=2)
             except json.JSONDecodeError:
                 pass
-                
+                    
         return jsonify({
             'id': dump_id,
             'filename': dump_id,
@@ -800,7 +814,7 @@ def get_dump_content(dump_id):
         })
     except Exception as e:
         print(f"Error reading dump content: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Error reading file: {str(e)}'}), 500
 
 # Signal handlers and server startup
 if __name__ == '__main__':
