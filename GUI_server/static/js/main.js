@@ -1045,7 +1045,7 @@ function previewFile(path) {
 
 // Keylogger functionality
 function updateKeyloggerAgents() {
-    fetch('/api/list_agents')
+    fetch('/api/targets')
         .then(response => response.json())
         .then(data => {
             const select = document.getElementById('keylogger-agent-select');
@@ -1064,7 +1064,7 @@ function updateKeyloggerAgents() {
                 if (isAgentActive(agent.last_seen)) {
                     const option = document.createElement('option');
                     option.value = agent.id;
-                    option.text = `Agent_${agent.id} (${agent.os_type || 'Unknown'} | ${agent.ip || 'Unknown IP'})`;
+                    option.text = `${agent.alias || `Agent_${agent.id}`} (${agent.os_type || 'Unknown'} | ${agent.ip || 'Unknown IP'})`;
                     select.add(option);
                 }
             });
